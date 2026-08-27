@@ -177,15 +177,36 @@ export async function queryGemini(prompt: string): Promise<{ text: string; model
     throw new Error('GEMINI_API_KEY is not configured');
   }
 
-  const model = 'gemini-1.5-flash';
-  const generativeModel = gemini.getGenerativeModel({ model });
-  const result = await generativeModel.generateContent(prompt);
-  const response = await result.response;
+  const candidateModels = [
+    process.env.GEMINI_MODEL,
+    'gemini-3.6-flash',
+    'gemini-3.7-flash',
+    'gemini-flash-latest',
+    'gemini-2.5-flash',
+    'gemini-1.5-flash',
+  ].filter(Boolean) as string[];
 
-  return {
-    text: response.text() || '',
-    model,
-  };
+  let lastError: Error | null = null;
+  for (const model of candidateModels) {
+    try {
+      const generativeModel = gemini.getGenerativeModel({ model });
+      const result = await generativeModel.generateContent(prompt);
+      const response = await result.response;
+
+      return {
+        text: response.text() || '',
+        model,
+      };
+    } catch (err: any) {
+      lastError = err;
+      if (err?.status === 404 || err?.message?.includes('not found') || err?.message?.includes('no longer available')) {
+        continue;
+      }
+      throw err;
+    }
+  }
+
+  throw lastError || new Error('All Gemini model candidate queries failed.');
 }
 
 export async function queryPerplexity(prompt: string): Promise<{ text: string; model: string; citations?: string[] }> {
@@ -582,24 +603,34 @@ ${rawText}`;
     }
   }
 
-  // 2. Fallback to Gemini 1.5 Flash
+  // 2. Fallback to Gemini
   const gemini = getGeminiClient();
   if (gemini) {
     try {
-      const model = gemini.getGenerativeModel({
-        model: 'gemini-1.5-flash',
-        generationConfig: {
-          responseMimeType: 'application/json',
-          temperature: 0.1,
-        },
-        systemInstruction: AEO_JUDGE_SYSTEM_PROMPT,
-      });
+      const candidateJudgeModels = ['gemini-3.6-flash', 'gemini-3.7-flash', 'gemini-flash-latest', 'gemini-2.5-flash'];
+      for (const model of candidateJudgeModels) {
+        try {
+          const genModel = gemini.getGenerativeModel({
+            model,
+            generationConfig: {
+              responseMimeType: 'application/json',
+              temperature: 0.1,
+            },
+            systemInstruction: AEO_JUDGE_SYSTEM_PROMPT,
+          });
 
-      const result = await model.generateContent(userMessage);
-      const content = result.response.text();
-      if (content) {
-        const parsed = JSON.parse(content);
-        return sanitizeEvaluation(parsed, brandName, brandDomain);
+          const result = await genModel.generateContent(userMessage);
+          const content = result.response.text();
+          if (content) {
+            const parsed = JSON.parse(content);
+            return sanitizeEvaluation(parsed, brandName, brandDomain);
+          }
+        } catch (mErr: any) {
+          if (mErr?.status === 404 || mErr?.message?.includes('not found') || mErr?.message?.includes('no longer available')) {
+            continue;
+          }
+          throw mErr;
+        }
       }
     } catch (err) {
       console.warn('Gemini judge evaluation failed:', err);
