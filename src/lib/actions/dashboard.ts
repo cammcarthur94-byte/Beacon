@@ -9,7 +9,7 @@ import {
   EngineComparison,
   AuditRunSummary,
 } from '@/types/geo';
-import { AI_ENGINES } from '@/lib/mock-data';
+import { AI_ENGINES } from '@/lib/constants';
 
 export interface DashboardMetrics {
   hasBrand: boolean;

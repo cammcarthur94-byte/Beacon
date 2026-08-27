@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { AIEngine } from '@/types/geo';
-import { AI_ENGINES } from '@/lib/mock-data';
+import { AI_ENGINES } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 import { Bot, Sparkles, Search, Zap, Compass, Globe } from 'lucide-react';
 

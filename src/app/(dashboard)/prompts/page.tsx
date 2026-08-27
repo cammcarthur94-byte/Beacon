@@ -16,6 +16,7 @@ import {
   Filter,
   Check,
   ChevronDown,
+  FileQuestion,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -34,173 +35,22 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  getPrompts,
+  createPrompt,
+  togglePromptActive,
+  deletePrompt,
+  batchCreatePrompts,
+  DbPrompt,
+} from '@/lib/actions/prompts';
 
 export type TechnicalPillar = 'GEO' | 'AEO' | 'AIO';
 export type SearchIntent = 'Informational' | 'Commercial' | 'Transactional' | 'Navigational';
 export type PromptType = 'Branded' | 'Unbranded';
 
-export interface TrackedPrompt {
-  id: string;
-  query: string;
-  runs: number;
-  modelsCount: number;
-  pillar: TechnicalPillar;
-  intent: SearchIntent;
-  type: PromptType;
-  engineScores: (number | null)[];
-  avgScore: number | null;
-  isActive: boolean;
-}
-
-const INITIAL_PROMPTS: TrackedPrompt[] = [
-  {
-    id: 'p-1',
-    query: 'What are the best athletic footwear & performance for everyday comfort and durability?',
-    runs: 0,
-    modelsCount: 1,
-    pillar: 'GEO',
-    intent: 'Informational',
-    type: 'Unbranded',
-    engineScores: [null, null, null, null, null, null, null],
-    avgScore: null,
-    isActive: true,
-  },
-  {
-    id: 'p-2',
-    query: 'How do Nike products fit compared to standard sizing?',
-    runs: 0,
-    modelsCount: 7,
-    pillar: 'AEO',
-    intent: 'Informational',
-    type: 'Branded',
-    engineScores: [null, null, null, null, null, null, null],
-    avgScore: null,
-    isActive: false,
-  },
-  {
-    id: 'p-3',
-    query: 'Key materials and quality features to look for in athletic footwear & performance',
-    runs: 0,
-    modelsCount: 7,
-    pillar: 'AIO',
-    intent: 'Informational',
-    type: 'Unbranded',
-    engineScores: [null, null, null, null, null, null, null],
-    avgScore: null,
-    isActive: false,
-  },
-  {
-    id: 'p-4',
-    query: 'Best athletic footwear & performance to buy: Nike vs Adidas',
-    runs: 0,
-    modelsCount: 7,
-    pillar: 'AIO',
-    intent: 'Commercial',
-    type: 'Branded',
-    engineScores: [null, null, null, null, null, null, null],
-    avgScore: null,
-    isActive: false,
-  },
-  {
-    id: 'p-5',
-    query: 'Is Nike better quality and more comfortable than Adidas?',
-    runs: 0,
-    modelsCount: 7,
-    pillar: 'GEO',
-    intent: 'Commercial',
-    type: 'Branded',
-    engineScores: [null, null, null, null, null, null, null],
-    avgScore: null,
-    isActive: false,
-  },
-  {
-    id: 'p-6',
-    query: 'Top stylish alternatives to Adidas for training and lifestyle',
-    runs: 0,
-    modelsCount: 7,
-    pillar: 'GEO',
-    intent: 'Commercial',
-    type: 'Unbranded',
-    engineScores: [null, null, null, null, null, null, null],
-    avgScore: null,
-    isActive: false,
-  },
-  {
-    id: 'p-7',
-    query: 'Where to buy authentic Nike running shoes online with discount',
-    runs: 2,
-    modelsCount: 5,
-    pillar: 'AIO',
-    intent: 'Transactional',
-    type: 'Branded',
-    engineScores: [85, 90, 75, 80, 70, null, null],
-    avgScore: 80,
-    isActive: false,
-  },
-  {
-    id: 'p-8',
-    query: 'Nike Pegasus vs Infinity Run long distance comparison',
-    runs: 4,
-    modelsCount: 7,
-    pillar: 'AEO',
-    intent: 'Commercial',
-    type: 'Branded',
-    engineScores: [92, 88, 85, 90, 80, 85, 88],
-    avgScore: 87,
-    isActive: false,
-  },
-  {
-    id: 'p-9',
-    query: 'Best shock absorbing running shoes for marathon training',
-    runs: 12,
-    modelsCount: 7,
-    pillar: 'GEO',
-    intent: 'Informational',
-    type: 'Unbranded',
-    engineScores: [78, 85, 80, 75, 70, 82, 79],
-    avgScore: 78,
-    isActive: false,
-  },
-  {
-    id: 'p-10',
-    query: 'How to clean and maintain breathable mesh running sneakers',
-    runs: 0,
-    modelsCount: 4,
-    pillar: 'AEO',
-    intent: 'Informational',
-    type: 'Unbranded',
-    engineScores: [null, null, null, null, null, null, null],
-    avgScore: null,
-    isActive: false,
-  },
-  {
-    id: 'p-11',
-    query: 'Nike official return and exchange policy warranty terms',
-    runs: 0,
-    modelsCount: 6,
-    pillar: 'AEO',
-    intent: 'Navigational',
-    type: 'Branded',
-    engineScores: [null, null, null, null, null, null, null],
-    avgScore: null,
-    isActive: false,
-  },
-  {
-    id: 'p-12',
-    query: 'Durable trail running footwear with waterproof Gore-Tex',
-    runs: 0,
-    modelsCount: 7,
-    pillar: 'GEO',
-    intent: 'Informational',
-    type: 'Unbranded',
-    engineScores: [null, null, null, null, null, null, null],
-    avgScore: null,
-    isActive: false,
-  },
-];
-
 export default function PromptsPage() {
-  const [prompts, setPrompts] = React.useState<TrackedPrompt[]>(INITIAL_PROMPTS);
+  const [prompts, setPrompts] = React.useState<DbPrompt[]>([]);
+  const [isLoading, setIsLoading] = React.useState(true);
   const [searchQuery, setSearchQuery] = React.useState('');
   const [selectedPillar, setSelectedPillar] = React.useState<'ALL' | TechnicalPillar>('ALL');
   const [selectedIntent, setSelectedIntent] = React.useState<string>('ALL');
@@ -210,6 +60,7 @@ export default function PromptsPage() {
   const [isAddModalOpen, setIsAddModalOpen] = React.useState(false);
   const [isAiModalOpen, setIsAiModalOpen] = React.useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = React.useState(false);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   // Add Prompt Form State
   const [newQuery, setNewQuery] = React.useState('');
@@ -224,29 +75,45 @@ export default function PromptsPage() {
     { query: string; pillar: TechnicalPillar; intent: SearchIntent; type: PromptType; selected: boolean }[]
   >([]);
 
+  // Load prompts on mount
+  const loadPrompts = React.useCallback(async () => {
+    setIsLoading(true);
+    const res = await getPrompts();
+    if (res.success) {
+      setPrompts(res.data);
+    }
+    setIsLoading(false);
+  }, []);
+
+  React.useEffect(() => {
+    loadPrompts();
+  }, [loadPrompts]);
+
   // Computed Counts
-  const activeCount = prompts.filter((p) => p.isActive).length;
+  const activeCount = prompts.filter((p) => p.is_active).length;
   const totalCount = prompts.length;
   const geoCount = prompts.filter((p) => p.pillar === 'GEO').length;
   const aeoCount = prompts.filter((p) => p.pillar === 'AEO').length;
   const aioCount = prompts.filter((p) => p.pillar === 'AIO').length;
 
-  const scoredPrompts = prompts.filter((p) => p.avgScore !== null);
+  const scoredPrompts = prompts.filter((p) => p.avg_score !== null && p.avg_score !== undefined);
   const avgOverallScore =
     scoredPrompts.length > 0
-      ? Math.round(scoredPrompts.reduce((acc, p) => acc + (p.avgScore || 0), 0) / scoredPrompts.length)
+      ? Math.round(scoredPrompts.reduce((acc, p) => acc + (p.avg_score || 0), 0) / scoredPrompts.length)
       : null;
 
   // Toggle active status
-  const handleToggleActive = (id: string) => {
+  const handleToggleActive = async (id: string, current: boolean) => {
     setPrompts((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, isActive: !p.isActive } : p))
+      prev.map((p) => (p.id === id ? { ...p, is_active: !current } : p))
     );
+    await togglePromptActive(id, !current);
   };
 
   // Delete prompt
-  const handleDeletePrompt = (id: string) => {
+  const handleDeletePrompt = async (id: string) => {
     setPrompts((prev) => prev.filter((p) => p.id !== id));
+    await deletePrompt(id);
   };
 
   // Copy prompt to clipboard
@@ -255,25 +122,23 @@ export default function PromptsPage() {
   };
 
   // Add custom prompt
-  const handleAddPrompt = (e: React.FormEvent) => {
+  const handleAddPrompt = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newQuery.trim()) return;
 
-    const newPromptItem: TrackedPrompt = {
-      id: `p-${Date.now()}`,
+    setIsSubmitting(true);
+    const res = await createPrompt({
       query: newQuery.trim(),
-      runs: 0,
-      modelsCount: 7,
       pillar: newPillar,
       intent: newIntent,
       type: newType,
-      engineScores: [null, null, null, null, null, null, null],
-      avgScore: null,
-      isActive: true,
-    };
+    });
 
-    setPrompts((prev) => [newPromptItem, ...prev]);
+    if (res.success && res.data) {
+      setPrompts((prev) => [res.data!, ...prev]);
+    }
     setNewQuery('');
+    setIsSubmitting(false);
     setIsAddModalOpen(false);
   };
 
@@ -283,35 +148,35 @@ export default function PromptsPage() {
     setTimeout(() => {
       setAiSuggestions([
         {
-          query: 'What are the highest-rated endurance running shoes for arch support?',
+          query: 'What are the highest-rated developer payment platforms for global currency support?',
           pillar: 'GEO',
           intent: 'Informational',
           type: 'Unbranded',
           selected: true,
         },
         {
-          query: 'Top 5 Nike running shoe models compared for marathon performance',
+          query: 'Stripe vs Adyen international transaction fee comparison',
           pillar: 'AEO',
           intent: 'Commercial',
           type: 'Branded',
           selected: true,
         },
         {
-          query: 'Best waterproof running shoes for wet winter terrain',
+          query: 'How to automate jurisdictional sales tax calculations in Next.js',
           pillar: 'AIO',
           intent: 'Informational',
           type: 'Unbranded',
           selected: true,
         },
         {
-          query: 'Where to buy Nike Vaporfly at best retail price online',
+          query: 'Where to find transparent payment gateway pricing without setup fees',
           pillar: 'AIO',
           intent: 'Transactional',
-          type: 'Branded',
+          type: 'Unbranded',
           selected: true,
         },
         {
-          query: 'Is Nike Pegasus durable enough for over 500 miles?',
+          query: 'Is Stripe Billing or Chargebee better for SaaS subscription management?',
           pillar: 'GEO',
           intent: 'Commercial',
           type: 'Branded',
@@ -319,34 +184,24 @@ export default function PromptsPage() {
         },
       ]);
       setIsGeneratingAi(false);
-    }, 900);
+    }, 800);
   };
 
-  const handleApplyAiSuggestions = () => {
+  const handleApplyAiSuggestions = async () => {
     const selected = aiSuggestions.filter((s) => s.selected);
-    const newItems: TrackedPrompt[] = selected.map((s, idx) => ({
-      id: `p-ai-${Date.now()}-${idx}`,
-      query: s.query,
-      runs: 0,
-      modelsCount: 7,
-      pillar: s.pillar,
-      intent: s.intent,
-      type: s.type,
-      engineScores: [null, null, null, null, null, null, null],
-      avgScore: null,
-      isActive: true,
-    }));
-
-    setPrompts((prev) => [...newItems, ...prev]);
+    setIsSubmitting(true);
+    await batchCreatePrompts(selected);
+    await loadPrompts();
+    setIsSubmitting(false);
     setIsAiModalOpen(false);
     setAiSuggestions([]);
   };
 
   // CSV Import handler
-  const handleImportCsv = () => {
+  const handleImportCsv = async () => {
     if (!csvText.trim()) return;
     const lines = csvText.split('\n').filter((l) => l.trim());
-    const imported: TrackedPrompt[] = lines.map((line, idx) => {
+    const parsed = lines.map((line) => {
       const parts = line.split(',').map((p) => p.trim().replace(/^["']|["']$/g, ''));
       const q = parts[0] || line;
       const pil = (parts[1] as TechnicalPillar) || 'GEO';
@@ -354,20 +209,17 @@ export default function PromptsPage() {
       const typ = (parts[3] as PromptType) || 'Unbranded';
 
       return {
-        id: `p-csv-${Date.now()}-${idx}`,
         query: q,
-        runs: 0,
-        modelsCount: 7,
         pillar: ['GEO', 'AEO', 'AIO'].includes(pil) ? pil : 'GEO',
         intent: ['Informational', 'Commercial', 'Transactional', 'Navigational'].includes(int) ? int : 'Informational',
         type: ['Branded', 'Unbranded'].includes(typ) ? typ : 'Unbranded',
-        engineScores: [null, null, null, null, null, null, null],
-        avgScore: null,
-        isActive: true,
       };
     });
 
-    setPrompts((prev) => [...imported, ...prev]);
+    setIsSubmitting(true);
+    await batchCreatePrompts(parsed);
+    await loadPrompts();
+    setIsSubmitting(false);
     setCsvText('');
     setIsImportModalOpen(false);
   };
@@ -461,14 +313,14 @@ export default function PromptsPage() {
         <div className="p-6 rounded-xl border border-gray-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-2xs flex flex-col justify-between">
           <div>
             <span className="text-[11px] font-bold tracking-wider uppercase text-gray-500 dark:text-zinc-400">
-              Last Audit Run
+              Connected Models
             </span>
             <div className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mt-1 tracking-tight">
-              Aug 26, 06:51 PM
+              5 Engines
             </div>
           </div>
           <div className="text-xs text-gray-500 dark:text-zinc-400 mt-3 font-medium">
-            all connected models
+            ChatGPT, Perplexity, Gemini, Claude, Copilot
           </div>
         </div>
       </div>
@@ -585,187 +437,212 @@ export default function PromptsPage() {
       </div>
 
       {/* 4. Prompt Library Table */}
-      <div className="rounded-xl border border-gray-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-2xs overflow-hidden">
-        {/* Table Title Bar */}
-        <div className="p-5 border-b border-gray-100 dark:border-zinc-800/80">
-          <h2 className="text-base font-semibold text-gray-900 dark:text-white">
-            Prompt library ({filteredPrompts.length})
-          </h2>
-          <p className="text-xs text-gray-500 dark:text-zinc-400">
-            Real-time AI search scoring and automatic pillar intent categorization
-          </p>
+      {isLoading ? (
+        <div className="p-12 flex flex-col items-center justify-center space-y-2 rounded-xl border border-gray-200/80 bg-white dark:bg-zinc-900 shadow-2xs">
+          <RotateCw className="w-6 h-6 text-blue-600 animate-spin" />
+          <span className="text-xs text-gray-500 font-medium">Fetching prompts from Supabase...</span>
         </div>
+      ) : prompts.length === 0 ? (
+        /* Empty State */
+        <div className="p-12 text-center rounded-xl border border-dashed border-gray-300 dark:border-zinc-800 bg-gray-50/50 dark:bg-zinc-900/50 space-y-3">
+          <FileQuestion className="w-10 h-10 text-gray-400 mx-auto" />
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-white">No Tracked Prompts Yet</h3>
+          <p className="text-xs text-gray-500 max-w-sm mx-auto">
+            Add queries manually, generate tailored prompts with AI, or import a CSV list to start monitoring your AI visibility.
+          </p>
+          <div className="flex items-center justify-center gap-2 pt-2">
+            <Button
+              onClick={() => {
+                setIsAiModalOpen(true);
+                handleGenerateAiPrompts();
+              }}
+              size="sm"
+              className="h-8.5 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs gap-1.5"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Generate with AI</span>
+            </Button>
+            <Button
+              onClick={() => setIsAddModalOpen(true)}
+              size="sm"
+              variant="outline"
+              className="h-8.5 px-3 rounded-xl border-gray-300 text-xs gap-1.5"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Add Prompt</span>
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div className="rounded-xl border border-gray-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-2xs overflow-hidden">
+          {/* Table Title Bar */}
+          <div className="p-5 border-b border-gray-100 dark:border-zinc-800/80">
+            <h2 className="text-base font-semibold text-gray-900 dark:text-white">
+              Prompt library ({filteredPrompts.length})
+            </h2>
+            <p className="text-xs text-gray-500 dark:text-zinc-400">
+              Real-time AI search scoring and automatic pillar intent categorization
+            </p>
+          </div>
 
-        {/* Responsive Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b border-gray-100 dark:border-zinc-800/80 bg-gray-50/50 dark:bg-zinc-900/40 text-[11px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-wider">
-                <th className="py-3 px-5 min-w-[320px]">Prompt / Query</th>
-                <th className="py-3 px-4">Technical Pillar</th>
-                <th className="py-3 px-4">Search Intent</th>
-                <th className="py-3 px-4">Type</th>
-                <th className="py-3 px-4 text-center">Engine Scores</th>
-                <th className="py-3 px-4 text-center">Avg</th>
-                <th className="py-3 px-4 text-center">Active</th>
-                <th className="py-3 px-5 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-zinc-800/60 text-xs">
-              {filteredPrompts.map((prompt) => {
-                return (
-                  <tr
-                    key={prompt.id}
-                    className="hover:bg-gray-50/70 dark:hover:bg-zinc-800/40 transition-colors group"
-                  >
-                    {/* Prompt / Query */}
-                    <td className="py-4 px-5">
-                      <div className="space-y-1">
-                        <p className="font-semibold text-gray-900 dark:text-zinc-100 text-xs leading-snug">
-                          &ldquo;{prompt.query}&rdquo;
-                        </p>
-                        <div className="text-[11px] text-gray-500 dark:text-zinc-400">
-                          {prompt.runs} runs • {prompt.modelsCount} {prompt.modelsCount === 1 ? 'Model' : 'Models'}
+          {/* Responsive Table */}
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-gray-100 dark:border-zinc-800/80 bg-gray-50/50 dark:bg-zinc-900/40 text-[11px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-wider">
+                  <th className="py-3 px-5 min-w-[320px]">Prompt / Query</th>
+                  <th className="py-3 px-4">Technical Pillar</th>
+                  <th className="py-3 px-4">Search Intent</th>
+                  <th className="py-3 px-4">Type</th>
+                  <th className="py-3 px-4 text-center">Engine Scores</th>
+                  <th className="py-3 px-4 text-center">Avg</th>
+                  <th className="py-3 px-4 text-center">Active</th>
+                  <th className="py-3 px-5 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 dark:divide-zinc-800/60 text-xs">
+                {filteredPrompts.map((prompt) => {
+                  return (
+                    <tr
+                      key={prompt.id}
+                      className="hover:bg-gray-50/70 dark:hover:bg-zinc-800/40 transition-colors group"
+                    >
+                      {/* Prompt / Query */}
+                      <td className="py-4 px-5">
+                        <div className="space-y-1">
+                          <p className="font-semibold text-gray-900 dark:text-zinc-100 text-xs leading-snug">
+                            &ldquo;{prompt.query}&rdquo;
+                          </p>
+                          <div className="text-[11px] text-gray-500 dark:text-zinc-400">
+                            {prompt.runs_count || 0} runs
+                          </div>
                         </div>
-                      </div>
-                    </td>
+                      </td>
 
-                    {/* Technical Pillar */}
-                    <td className="py-4 px-4 whitespace-nowrap">
-                      <span
-                        className={cn(
-                          'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border',
-                          prompt.pillar === 'GEO' &&
-                            'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-400 border-blue-200/60 dark:border-blue-800/60',
-                          prompt.pillar === 'AEO' &&
-                            'bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-400 border-purple-200/60 dark:border-purple-800/60',
-                          prompt.pillar === 'AIO' &&
-                            'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border-emerald-200/60 dark:border-emerald-800/60'
-                        )}
-                      >
+                      {/* Technical Pillar */}
+                      <td className="py-4 px-4 whitespace-nowrap">
                         <span
                           className={cn(
-                            'w-1.5 h-1.5 rounded-full inline-block',
-                            prompt.pillar === 'GEO' && 'bg-blue-500',
-                            prompt.pillar === 'AEO' && 'bg-purple-500',
-                            prompt.pillar === 'AIO' && 'bg-emerald-500'
+                            'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border',
+                            prompt.pillar === 'GEO' &&
+                              'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-400 border-blue-200/60 dark:border-blue-800/60',
+                            prompt.pillar === 'AEO' &&
+                              'bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-400 border-purple-200/60 dark:border-purple-800/60',
+                            prompt.pillar === 'AIO' &&
+                              'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border-emerald-200/60 dark:border-emerald-800/60'
                           )}
-                        />
-                        {prompt.pillar}
-                      </span>
-                    </td>
+                        >
+                          <span
+                            className={cn(
+                              'w-1.5 h-1.5 rounded-full inline-block',
+                              prompt.pillar === 'GEO' && 'bg-blue-500',
+                              prompt.pillar === 'AEO' && 'bg-purple-500',
+                              prompt.pillar === 'AIO' && 'bg-emerald-500'
+                            )}
+                          />
+                          {prompt.pillar}
+                        </span>
+                      </td>
 
-                    {/* Search Intent */}
-                    <td className="py-4 px-4 whitespace-nowrap">
-                      <span
-                        className={cn(
-                          'inline-block px-2.5 py-0.5 rounded-full text-[11px] font-medium border',
-                          prompt.intent === 'Informational' &&
-                            'bg-blue-50/70 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border-blue-200/70 dark:border-blue-800/60',
-                          prompt.intent === 'Commercial' &&
-                            'bg-amber-50/70 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200/70 dark:border-amber-800/60',
-                          prompt.intent === 'Transactional' &&
-                            'bg-emerald-50/70 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200/70 dark:border-emerald-800/60',
-                          prompt.intent === 'Navigational' &&
-                            'bg-purple-50/70 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border-purple-200/70 dark:border-purple-800/60'
+                      {/* Search Intent */}
+                      <td className="py-4 px-4 whitespace-nowrap">
+                        <span
+                          className={cn(
+                            'inline-block px-2.5 py-0.5 rounded-full text-[11px] font-medium border',
+                            prompt.intent === 'Informational' &&
+                              'bg-blue-50/70 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border-blue-200/70 dark:border-blue-800/60',
+                            prompt.intent === 'Commercial' &&
+                              'bg-amber-50/70 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200/70 dark:border-amber-800/60',
+                            prompt.intent === 'Transactional' &&
+                              'bg-emerald-50/70 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200/70 dark:border-emerald-800/60',
+                            prompt.intent === 'Navigational' &&
+                              'bg-purple-50/70 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border-purple-200/70 dark:border-purple-800/60'
+                          )}
+                        >
+                          {prompt.intent}
+                        </span>
+                      </td>
+
+                      {/* Type */}
+                      <td className="py-4 px-4 whitespace-nowrap">
+                        {prompt.type === 'Branded' ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border border-purple-200/60 dark:border-purple-800/60">
+                            <span className="w-1.5 h-1.5 rounded-full bg-purple-500 inline-block" />
+                            Branded
+                          </span>
+                        ) : (
+                          <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-zinc-400 border border-gray-200/60 dark:border-zinc-700/60">
+                            Unbranded
+                          </span>
                         )}
-                      >
-                        {prompt.intent}
-                      </span>
-                    </td>
+                      </td>
 
-                    {/* Type */}
-                    <td className="py-4 px-4 whitespace-nowrap">
-                      {prompt.type === 'Branded' ? (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border border-purple-200/60 dark:border-purple-800/60">
-                          <span className="w-1.5 h-1.5 rounded-full bg-purple-500 inline-block" />
-                          Branded
-                        </span>
-                      ) : (
-                        <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-zinc-400 border border-gray-200/60 dark:border-zinc-700/60">
-                          Unbranded
-                        </span>
-                      )}
-                    </td>
+                      {/* Engine Scores Ticks */}
+                      <td className="py-4 px-4 text-center">
+                        <div className="inline-flex items-center gap-1">
+                          {(prompt.engine_scores || [null, null, null, null, null]).map((score, sIdx) => {
+                            const hasScore = score !== null && score !== undefined;
+                            return (
+                              <div
+                                key={sIdx}
+                                title={hasScore ? `Score: ${score}` : 'Not Scored'}
+                                className={cn(
+                                  'w-1.5 h-4 rounded-xs transition-all',
+                                  hasScore
+                                    ? score >= 80
+                                      ? 'bg-emerald-500'
+                                      : score >= 60
+                                      ? 'bg-blue-500'
+                                      : 'bg-amber-500'
+                                    : 'bg-gray-200 dark:bg-zinc-800'
+                                )}
+                              />
+                            );
+                          })}
+                        </div>
+                      </td>
 
-                    {/* Engine Scores Ticks */}
-                    <td className="py-4 px-4 text-center">
-                      <div className="inline-flex items-center gap-1">
-                        {prompt.engineScores.map((score, sIdx) => {
-                          const hasScore = score !== null;
-                          return (
-                            <div
-                              key={sIdx}
-                              title={hasScore ? `Score: ${score}` : 'Not Scored'}
-                              className={cn(
-                                'w-1.5 h-4 rounded-xs transition-all',
-                                hasScore
-                                  ? score >= 80
-                                    ? 'bg-emerald-500'
-                                    : score >= 60
-                                    ? 'bg-blue-500'
-                                    : 'bg-amber-500'
-                                  : 'bg-gray-200 dark:bg-zinc-800'
-                              )}
-                            />
-                          );
-                        })}
-                      </div>
-                    </td>
+                      {/* Avg Score */}
+                      <td className="py-4 px-4 text-center font-semibold text-gray-900 dark:text-zinc-100">
+                        {prompt.avg_score !== null && prompt.avg_score !== undefined ? prompt.avg_score : '—'}
+                      </td>
 
-                    {/* Avg Score */}
-                    <td className="py-4 px-4 text-center font-semibold text-gray-900 dark:text-zinc-100">
-                      {prompt.avgScore !== null ? prompt.avgScore : '—'}
-                    </td>
+                      {/* Active Toggle Switch */}
+                      <td className="py-4 px-4 text-center">
+                        <Switch
+                          checked={prompt.is_active}
+                          onCheckedChange={() => handleToggleActive(prompt.id, prompt.is_active)}
+                          className="data-[state=checked]:bg-blue-600"
+                        />
+                      </td>
 
-                    {/* Active Toggle Switch */}
-                    <td className="py-4 px-4 text-center">
-                      <Switch
-                        checked={prompt.isActive}
-                        onCheckedChange={() => handleToggleActive(prompt.id)}
-                        className="data-[state=checked]:bg-blue-600"
-                      />
-                    </td>
-
-                    {/* Action Buttons */}
-                    <td className="py-4 px-5 text-right whitespace-nowrap">
-                      <div className="inline-flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
-                        <button
-                          onClick={() => handleCopyPrompt(prompt.query)}
-                          title="Copy prompt"
-                          className="p-1 rounded-md text-gray-400 hover:text-gray-700 dark:hover:text-zinc-200 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors"
-                        >
-                          <Copy className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={() => {
-                            setNewQuery(prompt.query);
-                            setNewPillar(prompt.pillar);
-                            setNewIntent(prompt.intent);
-                            setNewType(prompt.type);
-                            setIsAddModalOpen(true);
-                          }}
-                          title="Edit prompt"
-                          className="p-1 rounded-md text-gray-400 hover:text-gray-700 dark:hover:text-zinc-200 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors"
-                        >
-                          <Edit2 className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={() => handleDeletePrompt(prompt.id)}
-                          title="Delete prompt"
-                          className="p-1 rounded-md text-gray-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                      {/* Action Buttons */}
+                      <td className="py-4 px-5 text-right whitespace-nowrap">
+                        <div className="inline-flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
+                          <button
+                            onClick={() => handleCopyPrompt(prompt.query)}
+                            title="Copy prompt"
+                            className="p-1 rounded-md text-gray-400 hover:text-gray-700 dark:hover:text-zinc-200 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors"
+                          >
+                            <Copy className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleDeletePrompt(prompt.id)}
+                            title="Delete prompt"
+                            className="p-1 rounded-md text-gray-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* ========================================================================= */}
       {/* Modal 1: Add Custom Prompt */}
@@ -789,7 +666,7 @@ export default function PromptsPage() {
               <textarea
                 value={newQuery}
                 onChange={(e) => setNewQuery(e.target.value)}
-                placeholder="e.g., What are the best running shoes for everyday training?"
+                placeholder="e.g., What are the best payment gateways for SaaS?"
                 rows={3}
                 required
                 className="w-full p-3 rounded-xl border border-gray-200 dark:border-zinc-800 bg-gray-50/50 dark:bg-zinc-800/50 text-xs text-gray-900 dark:text-zinc-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
@@ -857,9 +734,10 @@ export default function PromptsPage() {
               </Button>
               <Button
                 type="submit"
+                disabled={isSubmitting || !newQuery.trim()}
                 className="text-xs h-9 rounded-xl bg-gray-900 hover:bg-black dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-zinc-900"
               >
-                Save Prompt
+                {isSubmitting ? 'Saving...' : 'Save Prompt'}
               </Button>
             </DialogFooter>
           </form>
@@ -942,7 +820,7 @@ export default function PromptsPage() {
               onClick={handleGenerateAiPrompts}
               className="text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/40"
             >
-              Regenerate Suggestions
+              Regenerate
             </Button>
             <div className="flex items-center gap-2">
               <Button
@@ -958,10 +836,10 @@ export default function PromptsPage() {
                 type="button"
                 size="sm"
                 onClick={handleApplyAiSuggestions}
-                disabled={aiSuggestions.filter((s) => s.selected).length === 0}
+                disabled={isSubmitting || aiSuggestions.filter((s) => s.selected).length === 0}
                 className="text-xs h-9 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium"
               >
-                Add {aiSuggestions.filter((s) => s.selected).length} Prompts
+                {isSubmitting ? 'Adding...' : `Add ${aiSuggestions.filter((s) => s.selected).length} Prompts`}
               </Button>
             </div>
           </DialogFooter>
@@ -1007,10 +885,10 @@ export default function PromptsPage() {
             <Button
               type="button"
               onClick={handleImportCsv}
-              disabled={!csvText.trim()}
+              disabled={isSubmitting || !csvText.trim()}
               className="text-xs h-9 rounded-xl bg-gray-900 hover:bg-black dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-zinc-900 font-medium"
             >
-              Import Rows
+              {isSubmitting ? 'Importing...' : 'Import Rows'}
             </Button>
           </DialogFooter>
         </DialogContent>

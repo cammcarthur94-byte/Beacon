@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { AIEngine, PromptQuery } from '@/types/geo';
-import { AI_ENGINES } from '@/lib/mock-data';
+import { AI_ENGINES } from '@/lib/constants';
 import {
   getBrandKitData,
   saveBrandProfile,

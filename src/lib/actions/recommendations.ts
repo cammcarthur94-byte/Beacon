@@ -4,7 +4,6 @@ import { revalidatePath } from 'next/cache';
 import { getCurrentUserId } from '@/lib/auth-helpers';
 import { getSupabaseAdmin } from '@/lib/supabase/admin';
 import { ActionRecommendation, ActionRecommendationStatus } from '@/types/geo';
-import { MOCK_ACTION_RECOMMENDATIONS } from '@/lib/mock-data';
 
 export interface ActionCenterState {
   recommendations: ActionRecommendation[];
@@ -119,23 +118,6 @@ export async function getActionRecommendations(
     }
   }
 
-  // Fallback to rich mock data if no database records exist yet (instant preview & demo capability)
-  if (recommendations.length === 0 && counts.pending === 0 && counts.approved === 0 && counts.dismissed === 0) {
-    const mockFiltered = MOCK_ACTION_RECOMMENDATIONS.filter((r) => r.status === filterStatus);
-    return {
-      recommendations: mockFiltered,
-      pendingCount: MOCK_ACTION_RECOMMENDATIONS.filter((r) => r.status === 'pending').length,
-      approvedCount: MOCK_ACTION_RECOMMENDATIONS.filter((r) => r.status === 'approved').length,
-      dismissedCount: MOCK_ACTION_RECOMMENDATIONS.filter((r) => r.status === 'dismissed').length,
-      brand: brand || {
-        id: 'b-01',
-        name: 'Acme Sync',
-        domain: 'acmesync.io',
-      },
-      isMockData: true,
-    };
-  }
-
   return {
     recommendations,
     pendingCount: counts.pending,
@@ -215,17 +197,30 @@ export async function seedSampleRecommendations(): Promise<{ success: boolean; c
     .eq('brand_id', brand.id)
     .limit(3);
 
-  const sampleRows = MOCK_ACTION_RECOMMENDATIONS.map((mockRec, idx) => ({
-    brand_id: brand!.id,
-    prompt_id: prompts && prompts[idx] ? prompts[idx].id : null,
-    engine_name: mockRec.engine_name,
-    issue_type: mockRec.issue_type,
-    title: mockRec.title,
-    explanation: mockRec.explanation,
-    drafted_content: mockRec.drafted_content,
-    status: 'pending',
-    created_at: new Date().toISOString(),
-  }));
+  const sampleRows = [
+    {
+      brand_id: brand.id,
+      prompt_id: prompts && prompts[0] ? prompts[0].id : null,
+      engine_name: 'perplexity',
+      issue_type: 'Content Gap' as const,
+      title: 'Missing comparison page for developer payment gateway alternatives',
+      explanation: 'Perplexity frequently references third-party comparison tables when answering queries about SaaS payment gateways. Adding a structured comparison page will capture primary citations.',
+      drafted_content: `## Payment Gateway Architecture Comparison\n\nWhen evaluating developer-first payment platforms, consider the following technical benchmarks:\n\n| Feature | ${(brand as any).brand_name || 'Your Brand'} | Legacy Gateways |\n| :--- | :--- | :--- |\n| Webhook Latency | <120ms | >800ms |\n| Multi-Currency | 135+ Currencies | 20 Currencies |\n| Automated Tax | Built-in | Add-on Required |`,
+      status: 'pending' as const,
+      created_at: new Date().toISOString(),
+    },
+    {
+      brand_id: brand.id,
+      prompt_id: prompts && prompts[1] ? prompts[1].id : null,
+      engine_name: 'chatgpt',
+      issue_type: 'Competitor Edge' as const,
+      title: 'Competitors outranking on international fee transparency',
+      explanation: 'ChatGPT 4o quotes competitor pricing pages due to explicit interchange++ disclosures. Publish a dedicated international fees guide to recapture rank #1.',
+      drafted_content: `### Transparent International Transaction Pricing\n\n- **Standard Domestic**: 2.9% + 30¢ per successful transaction\n- **International Cards**: +1.5% cross-border fee with zero hidden currency surcharges\n- **Settlement Time**: Instant or T+2 rolling payout cycle`,
+      status: 'pending' as const,
+      created_at: new Date().toISOString(),
+    },
+  ];
 
   try {
     await admin.from('action_recommendations').insert(sampleRows);

@@ -20,7 +20,7 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { MOCK_BRAND } from '@/lib/mock-data';
+import { getUserBrands, DbBrand } from '@/lib/actions/brands';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -82,7 +82,25 @@ const SIDEBAR_ITEMS = [
 
 export function Sidebar() {
   const pathname = usePathname();
-  const [selectedBrand, setSelectedBrand] = React.useState(MOCK_BRAND.name);
+  const [brands, setBrands] = React.useState<DbBrand[]>([]);
+  const [selectedBrand, setSelectedBrand] = React.useState<DbBrand>({
+    id: 'b-default',
+    name: 'Acme Sync',
+    domain: 'acmesync.io',
+    industry: 'Technology / SaaS',
+    description: '',
+    competitors: [],
+    created_at: new Date().toISOString(),
+  });
+
+  React.useEffect(() => {
+    getUserBrands().then((res) => {
+      if (res.success && res.data.length > 0) {
+        setBrands(res.data);
+        setSelectedBrand(res.data[0]);
+      }
+    });
+  }, []);
 
   return (
     <aside className="w-64 bg-gray-50/90 dark:bg-zinc-950 border-r border-gray-200/80 dark:border-zinc-800/80 flex flex-col justify-between h-screen sticky top-0 z-30 select-none shrink-0">
@@ -111,31 +129,49 @@ export function Sidebar() {
             <DropdownMenuTrigger className="w-full flex items-center justify-between p-2 rounded-xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-gray-100/80 dark:hover:bg-zinc-800 transition-all text-left shadow-2xs group">
               <div className="flex items-center gap-2.5 min-w-0">
                 <div className="w-6 h-6 rounded-md bg-blue-600/10 dark:bg-blue-400/10 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-xs shrink-0">
-                  {selectedBrand.charAt(0)}
+                  {selectedBrand.name.charAt(0)}
                 </div>
                 <div className="min-w-0 truncate">
-                  <div className="text-xs font-medium text-gray-900 dark:text-zinc-100 truncate">{selectedBrand}</div>
-                  <div className="text-[10px] text-gray-500 dark:text-zinc-400 truncate">{MOCK_BRAND.domain}</div>
+                  <div className="text-xs font-medium text-gray-900 dark:text-zinc-100 truncate">{selectedBrand.name}</div>
+                  <div className="text-[10px] text-gray-500 dark:text-zinc-400 truncate">{selectedBrand.domain}</div>
                 </div>
               </div>
               <ChevronDown className="w-3.5 h-3.5 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-zinc-300 transition-colors shrink-0 ml-1" />
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-56" align="start">
               <DropdownMenuLabel className="text-xs font-semibold text-gray-500">Tracked Brands</DropdownMenuLabel>
-              <DropdownMenuItem
-                onClick={() => setSelectedBrand(MOCK_BRAND.name)}
-                className="flex items-center justify-between cursor-pointer text-xs"
-              >
-                <div className="flex items-center gap-2">
-                  <Building2 className="w-4 h-4 text-blue-600" />
-                  <span className="font-medium">{MOCK_BRAND.name}</span>
-                </div>
-                {selectedBrand === MOCK_BRAND.name && <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" />}
-              </DropdownMenuItem>
+              {brands.length > 0 ? (
+                brands.map((b) => (
+                  <DropdownMenuItem
+                    key={b.id}
+                    onClick={() => setSelectedBrand(b)}
+                    className="flex items-center justify-between cursor-pointer text-xs"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Building2 className="w-4 h-4 text-blue-600" />
+                      <span className="font-medium">{b.name}</span>
+                    </div>
+                    {selectedBrand.id === b.id && <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" />}
+                  </DropdownMenuItem>
+                ))
+              ) : (
+                <DropdownMenuItem
+                  onClick={() => setSelectedBrand(selectedBrand)}
+                  className="flex items-center justify-between cursor-pointer text-xs"
+                >
+                  <div className="flex items-center gap-2">
+                    <Building2 className="w-4 h-4 text-blue-600" />
+                    <span className="font-medium">{selectedBrand.name}</span>
+                  </div>
+                  <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" />
+                </DropdownMenuItem>
+              )}
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-xs cursor-pointer text-gray-500 hover:text-gray-900">
-                + Add Brand...
-              </DropdownMenuItem>
+              <Link href="/brand-kit">
+                <DropdownMenuItem className="text-xs cursor-pointer text-gray-500 hover:text-gray-900">
+                  + Add / Configure Brand...
+                </DropdownMenuItem>
+              </Link>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

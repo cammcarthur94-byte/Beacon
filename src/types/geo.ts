@@ -68,6 +68,7 @@ export interface CitedUrl {
   sentiment: 'positive' | 'neutral' | 'negative';
   authorityScore: number;
   lastCited: string;
+  isTargetBrand?: boolean;
 }
 
 export interface MatrixRow {
