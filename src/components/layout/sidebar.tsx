@@ -37,8 +37,8 @@ const SIDEBAR_ITEMS = [
     icon: LayoutDashboard,
   },
   {
-    name: 'Audits',
-    href: '/dashboard/audits',
+    name: 'Prompts',
+    href: '/prompts',
     icon: FileSearch,
   },
   {
