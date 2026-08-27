@@ -8,16 +8,18 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex min-h-screen bg-background text-foreground">
-      {/* Persistent Left Sidebar */}
+    <div className="flex min-h-screen bg-gray-50 dark:bg-zinc-950 text-gray-900 dark:text-zinc-100">
+      {/* Fixed/Sticky Left Sidebar */}
       <Sidebar />
 
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0">
-        <Header />
-        <main className="flex-1 p-6 max-w-7xl w-full mx-auto space-y-6">
-          {children}
-        </main>
+      {/* Main Content Shell with Rounded Separation */}
+      <div className="flex-1 flex flex-col min-w-0 bg-gray-50 dark:bg-zinc-950">
+        <div className="flex-1 flex flex-col min-w-0 bg-white dark:bg-zinc-900 md:rounded-tl-2xl border-t md:border-l border-gray-200/80 dark:border-zinc-800/80 shadow-xs min-h-screen">
+          <Header />
+          <main className="flex-1 p-6 md:p-8 max-w-7xl w-full mx-auto space-y-6">
+            {children}
+          </main>
+        </div>
       </div>
     </div>
   );

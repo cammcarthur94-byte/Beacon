@@ -5,17 +5,19 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
+  FileSearch,
+  Archive,
+  Users,
+  Bell,
+  Globe,
+  Sparkles,
   Layers,
-  Grid3X3,
   Settings,
   Radio,
   ChevronDown,
-  Sparkles,
   Building2,
   CheckCircle2,
   ExternalLink,
-  CreditCard,
-  Zap,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { MOCK_BRAND } from '@/lib/mock-data';
@@ -28,42 +30,53 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
-const NAV_ITEMS = [
+const SIDEBAR_ITEMS = [
   {
     name: 'Dashboard',
     href: '/dashboard',
     icon: LayoutDashboard,
-    badge: null,
   },
   {
-    name: 'Action Center',
-    href: '/dashboard/actions',
-    icon: Zap,
-    badge: '3 Fixes',
+    name: 'Audits',
+    href: '/dashboard/audits',
+    icon: FileSearch,
   },
   {
-    name: 'Brand Kit',
+    name: 'Archive Audits',
+    href: '/dashboard/archive',
+    icon: Archive,
+  },
+  {
+    name: 'Competitor Intel',
     href: '/brand-kit',
-    icon: Layers,
-    badge: '4 Competitors',
+    icon: Users,
   },
   {
-    name: 'Visibility Matrix',
+    name: 'Alerts',
+    href: '/dashboard/alerts',
+    icon: Bell,
+    badge: '2',
+  },
+  {
+    name: 'Websites',
     href: '/visibility-matrix',
-    icon: Grid3X3,
-    badge: '6 Queries',
+    icon: Globe,
   },
   {
-    name: 'Billing & Plans',
-    href: '/billing',
-    icon: CreditCard,
-    badge: null,
+    name: 'AI Fix Queue',
+    href: '/dashboard/actions',
+    icon: Sparkles,
+    badge: '3',
+  },
+  {
+    name: 'Custom domains',
+    href: '/settings',
+    icon: Layers,
   },
   {
     name: 'Settings',
     href: '/settings',
     icon: Settings,
-    badge: null,
   },
 ];
 
@@ -72,86 +85,89 @@ export function Sidebar() {
   const [selectedBrand, setSelectedBrand] = React.useState(MOCK_BRAND.name);
 
   return (
-    <aside className="w-64 border-r border-border bg-card/60 backdrop-blur-xl flex flex-col justify-between h-screen sticky top-0 z-30 select-none">
+    <aside className="w-64 bg-gray-50/90 dark:bg-zinc-950 border-r border-gray-200/80 dark:border-zinc-800/80 flex flex-col justify-between h-screen sticky top-0 z-30 select-none shrink-0">
       <div className="flex flex-col">
-        {/* Logo & App Title */}
-        <div className="h-16 flex items-center px-5 border-b border-border/80 gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500 via-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/20 text-white">
-            <Radio className="w-5 h-5 animate-pulse" />
+        {/* Logo & Platform Header */}
+        <div className="h-16 flex items-center px-5 border-b border-gray-200/60 dark:border-zinc-800/60 gap-3">
+          <div className="w-8 h-8 rounded-lg bg-gray-900 dark:bg-white flex items-center justify-center text-white dark:text-zinc-950 shadow-sm">
+            <Radio className="w-4 h-4 animate-pulse" />
           </div>
           <div>
             <div className="flex items-center gap-1.5">
-              <span className="font-bold text-base tracking-tight bg-gradient-to-r from-foreground to-muted-foreground bg-clip-text">
-                BEACON
+              <span className="font-bold text-sm tracking-tight text-gray-900 dark:text-white">
+                Beacon
               </span>
-              <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-primary/15 text-primary border border-primary/20">
+              <span className="text-[10px] font-semibold tracking-wide px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 border border-blue-200/60 dark:border-blue-800/60">
                 GEO
               </span>
             </div>
-            <p className="text-[11px] text-muted-foreground font-medium">Generative Engine Optimization</p>
+            <p className="text-[10px] text-gray-500 dark:text-zinc-400 font-medium">Agentic SEO & AEO</p>
           </div>
         </div>
 
         {/* Brand Switcher */}
         <div className="p-3">
           <DropdownMenu>
-            <DropdownMenuTrigger className="w-full flex items-center justify-between p-2.5 rounded-lg border border-border bg-background/50 hover:bg-accent hover:border-border transition-all text-left group">
+            <DropdownMenuTrigger className="w-full flex items-center justify-between p-2 rounded-xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-gray-100/80 dark:hover:bg-zinc-800 transition-all text-left shadow-2xs group">
               <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-7 h-7 rounded-md bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-indigo-500/30 flex items-center justify-center text-primary font-bold text-xs shrink-0">
+                <div className="w-6 h-6 rounded-md bg-blue-600/10 dark:bg-blue-400/10 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-xs shrink-0">
                   {selectedBrand.charAt(0)}
                 </div>
                 <div className="min-w-0 truncate">
-                  <div className="text-xs font-semibold text-foreground truncate">{selectedBrand}</div>
-                  <div className="text-[10px] text-muted-foreground truncate">{MOCK_BRAND.domain}</div>
+                  <div className="text-xs font-medium text-gray-900 dark:text-zinc-100 truncate">{selectedBrand}</div>
+                  <div className="text-[10px] text-gray-500 dark:text-zinc-400 truncate">{MOCK_BRAND.domain}</div>
                 </div>
               </div>
-              <ChevronDown className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors shrink-0 ml-1" />
+              <ChevronDown className="w-3.5 h-3.5 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-zinc-300 transition-colors shrink-0 ml-1" />
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-56" align="start">
-              <DropdownMenuLabel>Active Brands</DropdownMenuLabel>
+              <DropdownMenuLabel className="text-xs font-semibold text-gray-500">Tracked Brands</DropdownMenuLabel>
               <DropdownMenuItem
                 onClick={() => setSelectedBrand(MOCK_BRAND.name)}
-                className="flex items-center justify-between cursor-pointer"
+                className="flex items-center justify-between cursor-pointer text-xs"
               >
                 <div className="flex items-center gap-2">
-                  <Building2 className="w-4 h-4 text-primary" />
-                  <span className="font-medium text-xs">{MOCK_BRAND.name}</span>
+                  <Building2 className="w-4 h-4 text-blue-600" />
+                  <span className="font-medium">{MOCK_BRAND.name}</span>
                 </div>
-                {selectedBrand === MOCK_BRAND.name && <CheckCircle2 className="w-3.5 h-3.5 text-primary" />}
+                {selectedBrand === MOCK_BRAND.name && <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" />}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-xs cursor-pointer text-muted-foreground hover:text-foreground">
-                + Connect New Brand...
+              <DropdownMenuItem className="text-xs cursor-pointer text-gray-500 hover:text-gray-900">
+                + Add Brand...
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
 
-        {/* Main Navigation */}
-        <div className="px-3 py-2">
-          <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70 px-3 pb-2">
-            Navigation
-          </div>
+        {/* Navigation Items */}
+        <div className="px-3 py-1">
           <nav className="space-y-1">
-            {NAV_ITEMS.map((item) => {
+            {SIDEBAR_ITEMS.map((item) => {
               const Icon = item.icon;
-              const isActive = pathname === item.href || (item.href === '/dashboard' && pathname === '/');
+              const isActive =
+                pathname === item.href ||
+                (item.href === '/dashboard' && pathname === '/') ||
+                (item.href !== '/dashboard' && pathname.startsWith(item.href));
+
               return (
                 <Link
-                  key={item.href}
+                  key={item.name}
                   href={item.href}
                   className={cn(
-                    'flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-medium transition-all group',
+                    'flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-all group',
                     isActive
-                      ? 'bg-primary/10 text-primary border border-primary/20 shadow-sm font-semibold'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-accent/60'
+                      ? 'bg-gray-200/80 dark:bg-zinc-800 text-gray-900 dark:text-zinc-100 font-semibold shadow-2xs'
+                      : 'text-gray-600 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-zinc-100 hover:bg-gray-100/70 dark:hover:bg-zinc-900'
                   )}
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2.5">
                     <Icon
                       className={cn(
                         'w-4 h-4 transition-colors',
-                        isActive ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground'
+                        isActive
+                          ? 'text-gray-900 dark:text-zinc-100'
+                          : 'text-gray-500 dark:text-zinc-400 group-hover:text-gray-900 dark:group-hover:text-zinc-200'
                       )}
                     />
                     <span>{item.name}</span>
@@ -159,10 +175,10 @@ export function Sidebar() {
                   {item.badge && (
                     <span
                       className={cn(
-                        'text-[10px] px-1.5 py-0.5 rounded-md border font-normal',
+                        'text-[10px] px-1.5 py-0.5 rounded-full font-medium',
                         isActive
-                          ? 'bg-primary/20 text-primary border-primary/30'
-                          : 'bg-muted text-muted-foreground border-border'
+                          ? 'bg-gray-300/80 dark:bg-zinc-700 text-gray-900 dark:text-zinc-100'
+                          : 'bg-gray-200/60 dark:bg-zinc-800 text-gray-600 dark:text-zinc-400'
                       )}
                     >
                       {item.badge}
@@ -173,49 +189,24 @@ export function Sidebar() {
             })}
           </nav>
         </div>
-
-        {/* Live Engine Audit Monitor Widget */}
-        <div className="px-3 mt-4">
-          <div className="p-3 rounded-xl border border-border/80 bg-gradient-to-b from-card/80 to-background/50 relative overflow-hidden">
-            <div className="absolute top-0 right-0 transform translate-x-3 -translate-y-3 w-16 h-16 bg-blue-500/10 rounded-full blur-xl pointer-events-none" />
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[11px] font-semibold text-foreground flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-                Vercel Cron Active
-              </span>
-              <span className="text-[10px] font-mono text-emerald-400 font-medium">Daily 00:00 UTC</span>
-            </div>
-            <p className="text-[11px] text-muted-foreground leading-relaxed">
-              Automated multi-engine audit runs every 24h across 5 AI platforms.
-            </p>
-            <div className="mt-2.5 pt-2 border-t border-border/50 flex items-center justify-between text-[10px] text-muted-foreground">
-              <span>Next Audit: in 7h 42m</span>
-              <span className="text-primary hover:underline cursor-pointer flex items-center gap-0.5">
-                Logs <ExternalLink className="w-2.5 h-2.5" />
-              </span>
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* User Profile Footer */}
-      <div className="p-3 border-t border-border/80">
-        <div className="flex items-center justify-between p-2 rounded-lg bg-background/40 border border-border/60">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-xs shadow-inner">
-              AV
+      <div className="p-3 border-t border-gray-200/60 dark:border-zinc-800/60">
+        <div className="flex items-center justify-between p-2 rounded-xl bg-white dark:bg-zinc-900 border border-gray-200/80 dark:border-zinc-800 shadow-2xs">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-7 h-7 rounded-full bg-gray-900 dark:bg-zinc-100 text-white dark:text-zinc-900 flex items-center justify-center font-semibold text-xs shrink-0">
+              CM
             </div>
             <div className="min-w-0">
-              <div className="text-xs font-semibold text-foreground truncate">Alex Vance</div>
-              <div className="text-[10px] text-muted-foreground truncate flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
+              <div className="text-xs font-medium text-gray-900 dark:text-zinc-100 truncate">Cam McArthur</div>
+              <div className="text-[10px] text-emerald-600 dark:text-emerald-400 truncate flex items-center gap-1 font-medium">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
                 Pro Workspace
               </div>
             </div>
           </div>
-          <div className="flex items-center">
-            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-          </div>
+          <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0" />
         </div>
       </div>
     </aside>
