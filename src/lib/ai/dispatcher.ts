@@ -130,25 +130,45 @@ export async function queryClaude(prompt: string): Promise<{ text: string; model
     throw new Error('ANTHROPIC_API_KEY is not configured');
   }
 
-  const model = 'claude-3-5-sonnet-20241022';
-  const response = await anthropic.messages.create({
-    model,
-    max_tokens: 1000,
-    messages: [
-      {
-        role: 'user',
-        content: prompt,
-      },
-    ],
-  });
+  const candidateModels = [
+    process.env.ANTHROPIC_MODEL,
+    'claude-sonnet-4-5-20250929',
+    'claude-3-5-sonnet-20241022',
+    'claude-3-5-haiku-20241022',
+    'claude-3-haiku-20240307',
+  ].filter(Boolean) as string[];
 
-  const contentBlock = response.content[0];
-  const text = contentBlock && contentBlock.type === 'text' ? contentBlock.text : '';
+  let lastError: Error | null = null;
+  for (const model of candidateModels) {
+    try {
+      const response = await anthropic.messages.create({
+        model,
+        max_tokens: 1000,
+        messages: [
+          {
+            role: 'user',
+            content: prompt,
+          },
+        ],
+      });
 
-  return {
-    text,
-    model,
-  };
+      const contentBlock = response.content[0];
+      const text = contentBlock && contentBlock.type === 'text' ? contentBlock.text : '';
+
+      return {
+        text,
+        model,
+      };
+    } catch (err: any) {
+      lastError = err;
+      if (err?.status === 404 || err?.message?.includes('not_found_error')) {
+        continue; // Try next model candidate
+      }
+      throw err;
+    }
+  }
+
+  throw lastError || new Error('All Claude model candidate queries failed.');
 }
 
 export async function queryGemini(prompt: string): Promise<{ text: string; model: string }> {
