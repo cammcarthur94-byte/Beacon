@@ -36,7 +36,10 @@ export const STRIPE_PLANS: Record<SubscriptionTier, PlanConfig> = {
     price: 49,
     interval: 'month',
     description: 'Comprehensive multi-engine visibility tracking and competitive intelligence.',
-    priceId: process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID || 'price_pro_monthly',
+    priceId:
+      process.env.STRIPE_PRO_PRICE_ID ||
+      process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID ||
+      'price_1U97IDAymIx1lrzYBPtJwh9G',
     highlight: true,
     features: [
       '3 Tracked Brands',
@@ -56,7 +59,10 @@ export const STRIPE_PLANS: Record<SubscriptionTier, PlanConfig> = {
     price: 199,
     interval: 'month',
     description: 'Full-scale GEO intelligence, premium SERP scrapers, and custom auditing.',
-    priceId: process.env.NEXT_PUBLIC_STRIPE_ENTERPRISE_PRICE_ID || 'price_enterprise_monthly',
+    priceId:
+      process.env.STRIPE_ENTERPRISE_PRICE_ID ||
+      process.env.NEXT_PUBLIC_STRIPE_ENTERPRISE_PRICE_ID ||
+      'price_1U97IEAymIx1lrzYY2HFYeEB',
     features: [
       'Unlimited Tracked Brands',
       'Unlimited Monitored Search Queries',
@@ -76,8 +82,14 @@ export const STRIPE_PLANS: Record<SubscriptionTier, PlanConfig> = {
 export function getTierFromPriceId(priceId: string | null | undefined): SubscriptionTier {
   if (!priceId) return 'starter';
 
-  const proPriceId = process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID || 'price_pro_monthly';
-  const entPriceId = process.env.NEXT_PUBLIC_STRIPE_ENTERPRISE_PRICE_ID || 'price_enterprise_monthly';
+  const proPriceId =
+    process.env.STRIPE_PRO_PRICE_ID ||
+    process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID ||
+    'price_1U97IDAymIx1lrzYBPtJwh9G';
+  const entPriceId =
+    process.env.STRIPE_ENTERPRISE_PRICE_ID ||
+    process.env.NEXT_PUBLIC_STRIPE_ENTERPRISE_PRICE_ID ||
+    'price_1U97IEAymIx1lrzYY2HFYeEB';
 
   if (priceId === proPriceId || priceId.toLowerCase().includes('pro')) {
     return 'pro';
