@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
   FileSearch,
-  Archive,
+  History,
   Users,
   Bell,
   Globe,
@@ -42,9 +42,9 @@ const SIDEBAR_ITEMS = [
     icon: FileSearch,
   },
   {
-    name: 'Archive Audits',
-    href: '/dashboard/archive',
-    icon: Archive,
+    name: 'Response History',
+    href: '/responses',
+    icon: History,
   },
   {
     name: 'Competitor Intel',
