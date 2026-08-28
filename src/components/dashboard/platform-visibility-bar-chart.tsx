@@ -3,17 +3,17 @@
 import * as React from 'react';
 import {
   ResponsiveContainer,
-  BarChart,
-  Bar,
+  LineChart,
+  Line,
   XAxis,
   YAxis,
   Tooltip,
-  Cell,
   CartesianGrid,
 } from 'recharts';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { BarChart3, Filter } from 'lucide-react';
+import { BarChart3 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { EngineIcon } from '@/components/ui/engine-icon';
 
 export interface PlatformScore {
   name: string;
@@ -27,14 +27,14 @@ interface PlatformVisibilityBarChartProps {
   data?: PlatformScore[];
   activeEngines?: string[];
   onToggleEngine?: (engineName: any) => void;
+  dateRange?: string;
 }
 
-
 const DEFAULT_PLATFORMS: PlatformScore[] = [
-  { name: 'ChatGPT', score: 86, color: '#10a37f', mentionRate: 78 },
   { name: 'Perplexity', score: 92, color: '#06b6d4', mentionRate: 88 },
-  { name: 'Gemini', score: 74, color: '#3b82f6', mentionRate: 68 },
+  { name: 'ChatGPT', score: 86, color: '#10a37f', mentionRate: 78 },
   { name: 'Claude', score: 81, color: '#f59e0b', mentionRate: 74 },
+  { name: 'Gemini', score: 74, color: '#3b82f6', mentionRate: 68 },
   { name: 'Copilot', score: 68, color: '#8b5cf6', mentionRate: 62 },
 ];
 
@@ -42,54 +42,69 @@ export function PlatformVisibilityBarChart({
   data = DEFAULT_PLATFORMS,
   activeEngines,
   onToggleEngine,
+  dateRange = 'Last 30 Days',
 }: PlatformVisibilityBarChartProps) {
-  // Sort platforms from highest to lowest score
-  const chartData = React.useMemo(() => {
+  const platformList = React.useMemo(() => {
     const raw = data && data.length > 0 ? data : DEFAULT_PLATFORMS;
     return [...raw].sort((a, b) => b.score - a.score);
   }, [data]);
 
-  const activeCount = activeEngines ? activeEngines.length : chartData.length;
-  const topPlatform = chartData[0] || { name: 'Perplexity', score: 92 };
-  const avgScore = chartData.length > 0
-    ? (chartData.reduce((acc, curr) => acc + curr.score, 0) / chartData.length).toFixed(1)
-    : '80.0';
+  const activeCount = activeEngines ? activeEngines.length : platformList.length;
+  const topPlatform = platformList[0] || { name: 'Perplexity', score: 92 };
+  const avgScore = platformList.length > 0
+    ? (platformList.reduce((acc, curr) => acc + curr.score, 0) / platformList.length).toFixed(1)
+    : '80.2';
 
-  const CustomBarTooltip = ({ active, payload }: any) => {
+  // Generate historical timeline data points for Platform Visibility over time
+  const timelineData = React.useMemo(() => {
+    const dates =
+      dateRange === 'Last 7 Days'
+        ? ['Aug 21', 'Aug 22', 'Aug 23', 'Aug 24', 'Aug 25', 'Aug 26', 'Aug 27']
+        : dateRange === 'Last 90 Days'
+        ? ['Jun 01', 'Jun 15', 'Jul 01', 'Jul 15', 'Aug 01', 'Aug 10', 'Aug 18', 'Aug 27']
+        : ['Aug 01', 'Aug 05', 'Aug 09', 'Aug 13', 'Aug 17', 'Aug 21', 'Aug 25', 'Aug 27'];
+
+    return dates.map((date, idx) => {
+      const progress = (idx + 1) / dates.length;
+
+      const row: Record<string, any> = { date };
+      platformList.forEach((platform) => {
+        // Base score with historical ramp-up curve and subtle organic variation
+        const startScore = platform.score - 10;
+        const current = Math.round(startScore + progress * 10 + Math.sin(idx * 1.3 + platform.score) * 2);
+        row[platform.name] = Math.min(100, Math.max(20, current));
+      });
+
+      return row;
+    });
+  }, [platformList, dateRange]);
+
+  const CustomLineTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
-      const item = payload[0].payload as PlatformScore;
-      const isEngineActive = !activeEngines || activeEngines.some((ae) => ae.toLowerCase() === item.name.toLowerCase());
       return (
         <div className="rounded-xl border border-gray-200/80 dark:border-zinc-800 bg-white/95 dark:bg-zinc-900/95 p-3 shadow-xl backdrop-blur-md text-xs space-y-1.5 min-w-[190px]">
-          <div className="flex items-center justify-between border-b border-gray-100 dark:border-zinc-800 pb-1 mb-1 font-semibold text-gray-900 dark:text-zinc-100">
-            <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
-              <span>{item.name}</span>
-            </div>
-            <span className="font-bold text-gray-900 dark:text-zinc-100 font-mono">{item.score}/100</span>
-          </div>
-          {item.mentionRate !== undefined && (
-            <div className="flex justify-between text-gray-500 dark:text-zinc-400">
-              <span>Mention Rate:</span>
-              <span className="font-semibold text-gray-900 dark:text-zinc-100 font-mono">{item.mentionRate}%</span>
-            </div>
-          )}
-          <div className="flex justify-between text-[11px] text-gray-400 dark:text-zinc-500 pt-0.5 border-t border-gray-100 dark:border-zinc-800">
-            <span>Filter Status:</span>
-            <span className={cn('font-semibold font-mono', isEngineActive ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 dark:text-zinc-500')}>
-              {isEngineActive ? 'Active Engine' : 'Excluded'}
-            </span>
+          <p className="font-bold text-[11px] text-gray-500 dark:text-zinc-400 border-b border-gray-100 dark:border-zinc-800 pb-1">
+            {label} — Visibility Score
+          </p>
+          <div className="space-y-1">
+            {payload.map((entry: any) => (
+              <div key={entry.name} className="flex items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <EngineIcon engine={entry.name} size={12} />
+                  <span className="text-gray-700 dark:text-zinc-300 truncate font-medium">
+                    {entry.name}
+                  </span>
+                </div>
+                <span className="font-bold font-mono text-gray-900 dark:text-white shrink-0">
+                  {entry.value}/100
+                </span>
+              </div>
+            ))}
           </div>
         </div>
       );
     }
     return null;
-  };
-
-  const handleBarClick = (entry: any) => {
-    if (entry && entry.name && onToggleEngine) {
-      onToggleEngine(entry.name);
-    }
   };
 
   return (
@@ -98,66 +113,95 @@ export function PlatformVisibilityBarChart({
         <div className="flex items-center justify-between">
           <CardTitle className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
             <BarChart3 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-            Brand Visibility by Platform
+            Brand Visibility by Platform Trend
           </CardTitle>
           <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/60">
             Scale /100
           </span>
         </div>
         <CardDescription className="text-xs text-gray-500 dark:text-zinc-400">
-          Ranked from highest to lowest visibility score (click to toggle)
+          Ranked visibility scores tracked across generative AI models overtime
         </CardDescription>
       </CardHeader>
 
       <CardContent className="pt-2 flex-1 flex flex-col justify-between space-y-4">
-        {/* Horizontal Bar Chart */}
-        <div className="h-[210px] w-full">
+        {/* Multi-Line Chart Canvas */}
+        <div className="h-[200px] w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={chartData}
-              layout="vertical"
-              margin={{ top: 5, right: 35, left: 10, bottom: 5 }}
+            <LineChart
+              data={timelineData}
+              margin={{ top: 8, right: 12, left: -20, bottom: 2 }}
             >
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(150,150,150,0.12)" horizontal={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(150,150,150,0.12)" vertical={false} />
               <XAxis
-                type="number"
-                domain={[0, 100]}
+                dataKey="date"
                 stroke="#71717a"
-                fontSize={11}
+                fontSize={10}
                 tickLine={false}
                 axisLine={false}
-                tickFormatter={(v) => `${v}%`}
               />
               <YAxis
-                type="category"
-                dataKey="name"
+                domain={[0, 100]}
                 stroke="#71717a"
-                fontSize={12}
+                fontSize={10}
                 tickLine={false}
                 axisLine={false}
-                width={85}
+                tickFormatter={(v) => `${v}`}
               />
-              <Tooltip content={<CustomBarTooltip />} />
-              <Bar
-                dataKey="score"
-                radius={[0, 6, 6, 0]}
-                barSize={20}
-                className="cursor-pointer"
-                onClick={handleBarClick}
-              >
-                {chartData.map((entry, index) => {
-                  const isEngineActive = !activeEngines || activeEngines.some((ae) => ae.toLowerCase() === entry.name.toLowerCase());
-                  return (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={entry.color}
-                      opacity={isEngineActive ? 1 : 0.25}
-                    />
-                  );
-                })}
-              </Bar>
-            </BarChart>
+              <Tooltip content={<CustomLineTooltip />} />
+              
+              {platformList.map((platform) => {
+                const isEngineActive =
+                  !activeEngines ||
+                  activeEngines.some((ae) => ae.toLowerCase() === platform.name.toLowerCase());
+
+                if (!isEngineActive) return null;
+
+                return (
+                  <Line
+                    key={platform.name}
+                    type="monotone"
+                    dataKey={platform.name}
+                    stroke={platform.color}
+                    strokeWidth={2.5}
+                    dot={false}
+                    activeDot={{ r: 4, strokeWidth: 1 }}
+                  />
+                );
+              })}
+            </LineChart>
           </ResponsiveContainer>
+        </div>
+
+        {/* Interactive Engine Legend Toggles */}
+        <div className="flex flex-wrap items-center justify-center gap-1.5 pt-0.5">
+          {platformList.map((platform) => {
+            const isEngineActive =
+              !activeEngines ||
+              activeEngines.some((ae) => ae.toLowerCase() === platform.name.toLowerCase());
+
+            return (
+              <button
+                key={platform.name}
+                type="button"
+                onClick={() => onToggleEngine && onToggleEngine(platform.name)}
+                className={cn(
+                  'inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-[10px] font-semibold border transition-all cursor-pointer select-none',
+                  isEngineActive
+                    ? 'bg-gray-50 dark:bg-zinc-800/80 text-gray-800 dark:text-zinc-200 border-gray-200 dark:border-zinc-700 shadow-2xs'
+                    : 'bg-gray-100/40 dark:bg-zinc-900/40 text-gray-400 dark:text-zinc-600 border-gray-200/50 dark:border-zinc-800/50 line-through opacity-50'
+                )}
+              >
+                <EngineIcon
+                  engine={platform.name}
+                  size={11}
+                  className={!isEngineActive ? 'grayscale opacity-40' : ''}
+                />
+                <span>{platform.name}</span>
+                <span className="font-mono text-[9px] opacity-70">({platform.score})</span>
+              </button>
+            );
+          })}
         </div>
 
         {/* Mini stats summary below chart */}
@@ -177,7 +221,7 @@ export function PlatformVisibilityBarChart({
         </div>
 
         {/* Subtle Description Subtext */}
-        <div className="text-[11px] text-gray-500 dark:text-zinc-400 flex items-center justify-between pt-1">
+        <div className="text-[11px] text-gray-500 dark:text-zinc-400 flex items-center justify-between pt-0.5">
           <span>Benchmarked across active engines</span>
           <span className="font-medium text-blue-600 dark:text-blue-400">
             {activeCount} Active {activeCount === 1 ? 'Model' : 'Models'}

@@ -500,18 +500,20 @@ export default function DashboardPage() {
           {/* Bottom Chart Section: Competitor Breakdown & Platform Visibility */}
           {/* ===================================================================== */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-            {/* Left Chart: Competitor Share of Voice Breakdown Horizontal Bar */}
+            {/* Left Chart: Competitor Share of Voice Trend Line Chart */}
             <CompetitorSovBarChart
               userSov={dynamicSov}
               brandName="Acme Sync (You)"
               competitors={competitorItems}
+              dateRange={dateRange}
             />
 
-            {/* Right Chart: Brand Visibility by Platform Horizontal Bar (Interactive Sync) */}
+            {/* Right Chart: Brand Visibility by Platform Trend Line Chart */}
             <PlatformVisibilityBarChart
               data={dynamicPlatformScores}
               activeEngines={activeEngines}
               onToggleEngine={toggleEngine}
+              dateRange={dateRange}
             />
           </div>
 

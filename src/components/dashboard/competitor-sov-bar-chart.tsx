@@ -3,13 +3,13 @@
 import * as React from 'react';
 import {
   ResponsiveContainer,
-  BarChart,
-  Bar,
+  LineChart,
+  Line,
   XAxis,
   YAxis,
   Tooltip,
-  Cell,
   CartesianGrid,
+  Legend,
 } from 'recharts';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Users, TrendingUp, ShieldCheck, ArrowUpRight } from 'lucide-react';
@@ -28,6 +28,7 @@ interface CompetitorSovBarChartProps {
   userSov?: number; // e.g. 42
   brandName?: string;
   competitors?: CompetitorShareItem[];
+  dateRange?: string;
 }
 
 const DEFAULT_COMPETITORS: CompetitorShareItem[] = [
@@ -41,40 +42,87 @@ export function CompetitorSovBarChart({
   userSov = 42,
   brandName = 'Acme Sync (You)',
   competitors = DEFAULT_COMPETITORS,
+  dateRange = 'Last 30 Days',
 }: CompetitorSovBarChartProps) {
-  // Ensure chart data is sorted from highest share to lowest share
-  const chartData = React.useMemo(() => {
-    const data = competitors && competitors.length > 0 ? competitors : DEFAULT_COMPETITORS;
-    return [...data].sort((a, b) => b.share - a.share);
+  const [activeCompetitors, setActiveCompetitors] = React.useState<string[]>([
+    'Acme Sync (You)',
+    'Competitor Alpha (Omni)',
+    'Competitor Beta (Nexus)',
+    'Competitor Gamma (Apex)',
+  ]);
+
+  const competitorList = React.useMemo(() => {
+    return competitors && competitors.length > 0 ? competitors : DEFAULT_COMPETITORS;
   }, [competitors]);
 
-  const topCompetitor = chartData.find((c) => !c.isUser) || { name: 'Competitor Alpha', share: 26 };
+  const topCompetitor = competitorList.find((c) => !c.isUser) || { name: 'Competitor Alpha', share: 26 };
   const leadGap = Math.max(0, userSov - topCompetitor.share);
 
-  const CustomTooltip = ({ active, payload }: any) => {
+  // Generate historical timeline data points for SOV over time
+  const timelineData = React.useMemo(() => {
+    const dates =
+      dateRange === 'Last 7 Days'
+        ? ['Aug 21', 'Aug 22', 'Aug 23', 'Aug 24', 'Aug 25', 'Aug 26', 'Aug 27']
+        : dateRange === 'Last 90 Days'
+        ? ['Jun 01', 'Jun 15', 'Jul 01', 'Jul 15', 'Aug 01', 'Aug 10', 'Aug 18', 'Aug 27']
+        : ['Aug 01', 'Aug 05', 'Aug 09', 'Aug 13', 'Aug 17', 'Aug 21', 'Aug 25', 'Aug 27'];
+
+    return dates.map((date, idx) => {
+      const progress = (idx + 1) / dates.length;
+      // Acme Sync trending up from ~34% to userSov
+      const youScore = Math.round(userSov - (1 - progress) * 8 + (Math.sin(idx * 1.5) * 1.5));
+      // Alpha steady/slightly dropping from ~29% to 26%
+      const alphaScore = Math.round(29 - progress * 3 + (Math.cos(idx * 1.2) * 1));
+      // Beta fluctuating around 18%
+      const betaScore = Math.round(19 - progress * 1 + (Math.sin(idx * 2) * 1));
+      // Gamma steady around 14%
+      const gammaScore = Math.round(13 + progress * 1);
+
+      return {
+        date,
+        'Acme Sync (You)': Math.min(100, Math.max(10, youScore)),
+        'Competitor Alpha (Omni)': Math.min(100, Math.max(5, alphaScore)),
+        'Competitor Beta (Nexus)': Math.min(100, Math.max(5, betaScore)),
+        'Competitor Gamma (Apex)': Math.min(100, Math.max(5, gammaScore)),
+      };
+    });
+  }, [userSov, dateRange]);
+
+  const toggleEntity = (entityName: string) => {
+    setActiveCompetitors((prev) => {
+      if (prev.includes(entityName)) {
+        if (prev.length === 1) return prev; // Keep at least one
+        return prev.filter((n) => n !== entityName);
+      }
+      return [...prev, entityName];
+    });
+  };
+
+  const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
-      const item = payload[0].payload as CompetitorShareItem;
       return (
-        <div className="rounded-xl border border-gray-200/80 dark:border-zinc-800 bg-white/95 dark:bg-zinc-900/95 p-3 shadow-xl backdrop-blur-md text-xs space-y-1.5 min-w-[200px]">
-          <div className="flex items-center justify-between border-b border-gray-100 dark:border-zinc-800 pb-1 mb-1 font-semibold text-gray-900 dark:text-zinc-100">
-            <div className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }} />
-              <span className="truncate">{item.name}</span>
-            </div>
-            <span className="font-bold text-gray-900 dark:text-zinc-100 font-mono">{item.share}%</span>
+        <div className="rounded-xl border border-gray-200/80 dark:border-zinc-800 bg-white/95 dark:bg-zinc-900/95 p-3 shadow-xl backdrop-blur-md text-xs space-y-1.5 min-w-[210px]">
+          <p className="font-bold text-[11px] text-gray-500 dark:text-zinc-400 border-b border-gray-100 dark:border-zinc-800 pb-1">
+            {label} — Share of Voice
+          </p>
+          <div className="space-y-1">
+            {payload.map((entry: any) => {
+              const isUser = entry.name.includes('(You)');
+              return (
+                <div key={entry.name} className="flex items-center justify-between gap-3 text-xs">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: entry.color }} />
+                    <span className={cn('truncate', isUser ? 'font-bold text-blue-600 dark:text-blue-400' : 'text-gray-700 dark:text-zinc-300')}>
+                      {entry.name.split('(')[0].trim()}
+                    </span>
+                  </div>
+                  <span className="font-bold font-mono text-gray-900 dark:text-white shrink-0">
+                    {entry.value}%
+                  </span>
+                </div>
+              );
+            })}
           </div>
-          <div className="flex justify-between text-gray-500 dark:text-zinc-400">
-            <span>Market Lead Status:</span>
-            <span className={cn('font-semibold font-mono', item.isUser ? 'text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-zinc-300')}>
-              {item.isUser ? `Leader (+${leadGap}% gap)` : `-${Math.abs(userSov - item.share)}% vs you`}
-            </span>
-          </div>
-          {item.domain && (
-            <div className="flex justify-between text-[11px] text-gray-400 dark:text-zinc-500">
-              <span>Domain:</span>
-              <span className="font-mono">{item.domain}</span>
-            </div>
-          )}
         </div>
       );
     }
@@ -87,54 +135,88 @@ export function CompetitorSovBarChart({
         <div className="flex items-center justify-between">
           <CardTitle className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
             <Users className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-            Competitor Share of Voice Breakdown
+            Competitor Share of Voice Trend
           </CardTitle>
           <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 border border-blue-200/60 dark:border-blue-800/60">
             +{leadGap}% Lead
           </span>
         </div>
         <CardDescription className="text-xs text-gray-500 dark:text-zinc-400">
-          Actionable competitor market share & citation displacement analysis
+          Historical competitor market share & citation displacement overtime
         </CardDescription>
       </CardHeader>
 
       <CardContent className="pt-2 flex-1 flex flex-col justify-between space-y-3.5">
-        {/* Horizontal Bar Chart */}
-        <div className="h-[210px] w-full">
+        {/* Multi-Line Chart Canvas */}
+        <div className="h-[200px] w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={chartData}
-              layout="vertical"
-              margin={{ top: 5, right: 35, left: 10, bottom: 5 }}
+            <LineChart
+              data={timelineData}
+              margin={{ top: 8, right: 12, left: -20, bottom: 2 }}
             >
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(150,150,150,0.12)" horizontal={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(150,150,150,0.12)" vertical={false} />
               <XAxis
-                type="number"
+                dataKey="date"
+                stroke="#71717a"
+                fontSize={10}
+                tickLine={false}
+                axisLine={false}
+              />
+              <YAxis
                 domain={[0, 50]}
                 stroke="#71717a"
-                fontSize={11}
+                fontSize={10}
                 tickLine={false}
                 axisLine={false}
                 tickFormatter={(v) => `${v}%`}
               />
-              <YAxis
-                type="category"
-                dataKey="name"
-                stroke="#71717a"
-                fontSize={11}
-                tickLine={false}
-                axisLine={false}
-                width={125}
-                tickFormatter={(name: string) => name.split('(')[0].trim()}
-              />
               <Tooltip content={<CustomTooltip />} />
-              <Bar dataKey="share" radius={[0, 6, 6, 0]} barSize={20}>
-                {chartData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
-                ))}
-              </Bar>
-            </BarChart>
+              
+              {competitorList.map((comp) => {
+                const isActive = activeCompetitors.includes(comp.name);
+                if (!isActive) return null;
+
+                return (
+                  <Line
+                    key={comp.name}
+                    type="monotone"
+                    dataKey={comp.name}
+                    stroke={comp.color}
+                    strokeWidth={comp.isUser ? 3 : 2}
+                    dot={false}
+                    activeDot={{ r: 4, strokeWidth: 1 }}
+                  />
+                );
+              })}
+            </LineChart>
           </ResponsiveContainer>
+        </div>
+
+        {/* Interactive Legend Toggles */}
+        <div className="flex flex-wrap items-center justify-center gap-1.5 pt-1">
+          {competitorList.map((comp) => {
+            const isActive = activeCompetitors.includes(comp.name);
+            return (
+              <button
+                key={comp.name}
+                type="button"
+                onClick={() => toggleEntity(comp.name)}
+                className={cn(
+                  'inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-[10px] font-semibold border transition-all cursor-pointer select-none',
+                  isActive
+                    ? 'bg-gray-50 dark:bg-zinc-800/80 text-gray-800 dark:text-zinc-200 border-gray-200 dark:border-zinc-700 shadow-2xs'
+                    : 'bg-gray-100/40 dark:bg-zinc-900/40 text-gray-400 dark:text-zinc-600 border-gray-200/50 dark:border-zinc-800/50 line-through opacity-50'
+                )}
+              >
+                <span
+                  className={cn('w-2 h-2 rounded-full shrink-0', !isActive && 'grayscale')}
+                  style={{ backgroundColor: comp.color }}
+                />
+                <span>{comp.name.split('(')[0].trim()}</span>
+                <span className="font-mono text-[9px] opacity-70">({comp.share}%)</span>
+              </button>
+            );
+          })}
         </div>
 
         {/* Structured summary row */}
@@ -154,7 +236,7 @@ export function CompetitorSovBarChart({
         </div>
 
         {/* Subtle Description Subtext */}
-        <div className="text-[11px] text-gray-500 dark:text-zinc-400 flex items-center justify-between pt-1">
+        <div className="text-[11px] text-gray-500 dark:text-zinc-400 flex items-center justify-between pt-0.5">
           <span>Tracking top 4 market entities</span>
           <span className="font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
             <TrendingUp className="w-3 h-3" /> +3.2% vs #1 competitor
