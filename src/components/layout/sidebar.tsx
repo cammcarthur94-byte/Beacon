@@ -62,6 +62,7 @@ const NAV_SECTIONS: NavSection[] = [
   {
     title: 'Configuration',
     items: [
+      { name: 'Brand Kit', href: '/brand-kit', icon: Building2 },
       { name: 'Settings', href: '/settings', icon: Settings },
     ],
   },
