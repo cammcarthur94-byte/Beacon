@@ -17,6 +17,7 @@ import {
 import { cn } from '@/lib/utils';
 import { OptimizationAction, ActionStatus, ActionSeverity } from '@/types/optimization';
 import { EngineType } from '@/types/responses';
+import { EngineIcon } from '@/components/ui/engine-icon';
 
 interface TriageFeedProps {
   actions: OptimizationAction[];
@@ -243,12 +244,12 @@ export function TriageFeed({
                     {/* Engine Badge */}
                     <span
                       className={cn(
-                        'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border',
+                        'inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold border',
                         engMeta.bg,
                         engMeta.text
                       )}
                     >
-                      <span className={cn('w-1.5 h-1.5 rounded-full', engMeta.dot)} />
+                      <EngineIcon engine={action.engine} size={11} />
                       <span>{action.engine}</span>
                     </span>
 

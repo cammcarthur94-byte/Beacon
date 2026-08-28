@@ -17,6 +17,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { SourceDomain, DomainCategoryType } from '@/types/domains';
+import { DomainFavicon } from '@/components/ui/domain-favicon';
 
 interface DomainTableProps {
   domains: SourceDomain[];
@@ -308,10 +309,13 @@ export function DomainTable({ domains }: DomainTableProps) {
                   >
                     {/* Domain Name + External Link */}
                     <td className="py-4 px-5">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-7 h-7 rounded-lg bg-gray-100 dark:bg-zinc-800 text-gray-700 dark:text-zinc-300 flex items-center justify-center font-bold text-xs shrink-0">
-                          {domain.domain.charAt(0).toUpperCase()}
-                        </div>
+                      <div className="flex items-center gap-3">
+                        <DomainFavicon
+                          domainOrUrl={domain.domain}
+                          size={28}
+                          className="rounded-lg shadow-2xs shrink-0"
+                          fallbackInitial
+                        />
                         <div className="min-w-0">
                           <div className="flex items-center gap-1.5">
                             <span className="font-semibold text-gray-900 dark:text-zinc-100">

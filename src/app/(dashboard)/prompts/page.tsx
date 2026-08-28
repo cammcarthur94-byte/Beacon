@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { EngineIcon } from '@/components/ui/engine-icon';
 import { Switch } from '@/components/ui/switch';
 import {
   Dialog,
@@ -953,24 +954,28 @@ export default function PromptsPage() {
                               const isChecked = promptEngines.includes(eng.name);
 
                               return (
-                                <button
-                                  key={eng.name}
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleToggleEngineForPrompt(prompt.id, eng.name);
-                                  }}
-                                  title={isChecked ? `${eng.name} active (Click to exclude)` : `${eng.name} excluded (Click to include)`}
-                                  className={cn(
-                                    'inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-medium border transition-all cursor-pointer select-none',
-                                    isChecked
-                                      ? 'bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border-blue-200/80 dark:border-blue-800/60 shadow-2xs hover:border-blue-400'
-                                      : 'bg-gray-100/50 dark:bg-zinc-800/30 text-gray-400 dark:text-zinc-600 border-gray-200/60 dark:border-zinc-800 line-through opacity-50 hover:opacity-90 hover:border-gray-300'
-                                  )}
-                                >
-                                  <span className={cn('w-1.5 h-1.5 rounded-full', isChecked ? eng.color : 'bg-gray-300 dark:bg-zinc-600')} />
-                                  <span>{eng.name}</span>
-                                </button>
+                                  <button
+                                    key={eng.name}
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleToggleEngineForPrompt(prompt.id, eng.name);
+                                    }}
+                                    title={isChecked ? `${eng.name} active (Click to exclude)` : `${eng.name} excluded (Click to include)`}
+                                    className={cn(
+                                      'inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-semibold border transition-all cursor-pointer select-none',
+                                      isChecked
+                                        ? 'bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border-blue-200/80 dark:border-blue-800/60 shadow-2xs hover:border-blue-400'
+                                        : 'bg-gray-100/50 dark:bg-zinc-800/30 text-gray-400 dark:text-zinc-600 border-gray-200/60 dark:border-zinc-800 line-through opacity-50 hover:opacity-90 hover:border-gray-300'
+                                    )}
+                                  >
+                                    <EngineIcon
+                                      engine={eng.name}
+                                      size={11}
+                                      className={isChecked ? '' : 'grayscale opacity-40'}
+                                    />
+                                    <span>{eng.name}</span>
+                                  </button>
                               );
                             })}
                           </div>

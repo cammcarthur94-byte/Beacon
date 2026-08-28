@@ -23,7 +23,9 @@ import {
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { AuditRunItem } from '@/types/responses';
-import { HighlightText } from './highlight-text';
+import { HighlightText } from '@/components/responses/highlight-text';
+import { EngineIcon } from '@/components/ui/engine-icon';
+import { DomainFavicon } from '@/components/ui/domain-favicon';
 
 interface InspectionDrawerProps {
   isOpen: boolean;
@@ -123,7 +125,7 @@ export function InspectionDrawer({
                   engineMeta.text
                 )}
               >
-                <span className={cn('w-2 h-2 rounded-full', engineMeta.dot)} />
+                <EngineIcon engine={auditItem.engine} size={14} />
                 <span>{auditItem.engine}</span>
               </span>
 
@@ -296,15 +298,18 @@ export function InspectionDrawer({
                       key={idx}
                       className="p-3 flex items-center justify-between hover:bg-gray-50/80 dark:hover:bg-zinc-800/40 transition-colors gap-3"
                     >
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <span className="w-5 h-5 rounded-md bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-zinc-400 font-mono text-[10px] font-bold flex items-center justify-center shrink-0">
-                          {cite.position || idx + 1}
-                        </span>
+                      <div className="flex items-center gap-3 min-w-0">
+                        <DomainFavicon
+                          domainOrUrl={cite.domain || cite.url}
+                          size={24}
+                          className="rounded-md shadow-2xs shrink-0"
+                          fallbackInitial
+                        />
                         <div className="min-w-0">
-                          <p className="text-xs font-medium text-gray-900 dark:text-zinc-100 truncate">
+                          <p className="text-xs font-semibold text-gray-900 dark:text-zinc-100 truncate">
                             {cite.title || cite.domain}
                           </p>
-                          <p className="text-[11px] text-gray-400 dark:text-zinc-500 truncate">
+                          <p className="text-[11px] text-gray-400 dark:text-zinc-500 font-mono truncate">
                             {cite.url}
                           </p>
                         </div>

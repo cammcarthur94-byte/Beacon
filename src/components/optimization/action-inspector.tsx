@@ -25,6 +25,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { OptimizationAction } from '@/types/optimization';
+import { EngineIcon } from '@/components/ui/engine-icon';
+import { DomainFavicon } from '@/components/ui/domain-favicon';
 
 interface ActionInspectorProps {
   action: OptimizationAction | null;
@@ -85,8 +87,9 @@ export function ActionInspector({
               {action.severity} Severity
             </span>
 
-            <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border border-purple-200/60 dark:border-purple-800/60">
-              {action.engine} Model Gap
+            <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border border-purple-200/60 dark:border-purple-800/60 flex items-center gap-1.5">
+              <EngineIcon engine={action.engine} size={12} />
+              <span>{action.engine} Model Gap</span>
             </span>
 
             <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800/60">
@@ -132,9 +135,17 @@ export function ActionInspector({
               Favored Competitor Source
             </span>
             <div className="flex items-center justify-between gap-2">
-              <span className="text-xs font-bold text-gray-900 dark:text-zinc-100 truncate">
-                {action.competitorInsight.competitorName}
-              </span>
+              <div className="flex items-center gap-2 min-w-0">
+                <DomainFavicon
+                  domainOrUrl={action.competitorInsight.competitorUrl}
+                  size={18}
+                  className="rounded shrink-0"
+                  fallbackInitial
+                />
+                <span className="text-xs font-bold text-gray-900 dark:text-zinc-100 truncate">
+                  {action.competitorInsight.competitorName}
+                </span>
+              </div>
               <a
                 href={action.competitorInsight.competitorUrl}
                 target="_blank"
@@ -157,9 +168,17 @@ export function ActionInspector({
               Target Source Page to Update
             </span>
             <div className="flex items-center justify-between gap-2">
-              <span className="text-xs font-bold text-gray-900 dark:text-zinc-100 truncate font-mono">
-                {action.targetSourceUrl}
-              </span>
+              <div className="flex items-center gap-2 min-w-0">
+                <DomainFavicon
+                  domainOrUrl={action.targetSourceUrl}
+                  size={18}
+                  className="rounded shrink-0"
+                  fallbackInitial
+                />
+                <span className="text-xs font-bold text-gray-900 dark:text-zinc-100 truncate font-mono">
+                  {action.targetSourceUrl}
+                </span>
+              </div>
               <a
                 href={action.targetSourceUrl}
                 target="_blank"

@@ -13,8 +13,21 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { EngineBadge } from '@/components/engine-badge';
+import { DomainFavicon } from '@/components/ui/domain-favicon';
 import { Input } from '@/components/ui/input';
-import { ExternalLink, Search, Globe, ThumbsUp, Minus, ThumbsDown, ShieldCheck, ShieldAlert } from 'lucide-react';
+import {
+  ExternalLink,
+  ShieldCheck,
+  ShieldAlert,
+  Sparkles,
+  ArrowUpRight,
+  TrendingUp,
+  Globe,
+  ThumbsUp,
+  ThumbsDown,
+  Minus,
+  Search,
+} from 'lucide-react';
 
 interface TopCitationsTableProps {
   citations: (CitedUrl & { isTargetBrand?: boolean })[];
@@ -90,8 +103,8 @@ export function TopCitationsTable({ citations }: TopCitationsTableProps) {
                         <div className="font-semibold text-xs text-foreground group-hover:text-primary transition-colors line-clamp-1">
                           {item.title || item.url}
                         </div>
-                        <div className="flex items-center gap-1.5 mt-0.5 text-[11px] text-muted-foreground">
-                          <Globe className="w-3 h-3 text-muted-foreground/70 shrink-0" />
+                        <div className="flex items-center gap-1.5 mt-1 text-[11px] text-muted-foreground">
+                          <DomainFavicon domainOrUrl={item.domain || item.url} size={14} className="rounded" />
                           <span className="font-mono text-[10px] text-muted-foreground truncate">{item.domain}</span>
                           <span>•</span>
                           <span className="text-[10px] text-muted-foreground/70">{item.lastCited}</span>

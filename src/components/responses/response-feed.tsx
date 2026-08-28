@@ -17,6 +17,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { AuditRunItem, EngineType, SentimentType } from '@/types/responses';
+import { EngineIcon } from '@/components/ui/engine-icon';
 
 interface ResponseFeedProps {
   items: AuditRunItem[];
@@ -249,7 +250,7 @@ export function ResponseFeed({
                       engConfig.border
                     )}
                   >
-                    <span className={cn('w-1.5 h-1.5 rounded-full', engConfig.dot)} />
+                    <EngineIcon engine={item.engine} size={13} />
                     <span>{item.engine}</span>
                   </span>
 
