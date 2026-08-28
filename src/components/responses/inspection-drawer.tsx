@@ -37,7 +37,7 @@ const ENGINE_BADGES: Record<string, { label: string; bg: string; text: string; d
   ChatGPT: { label: 'OpenAI GPT-4o', bg: 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-200 dark:border-emerald-800/60', text: 'text-emerald-700 dark:text-emerald-300', dot: 'bg-emerald-500' },
   Perplexity: { label: 'Sonar Online', bg: 'bg-cyan-50 dark:bg-cyan-950/60 border-cyan-200 dark:border-cyan-800/60', text: 'text-cyan-700 dark:text-cyan-300', dot: 'bg-cyan-500' },
   Gemini: { label: 'Gemini 1.5 Pro', bg: 'bg-blue-50 dark:bg-blue-950/60 border-blue-200 dark:border-blue-800/60', text: 'text-blue-700 dark:text-blue-300', dot: 'bg-blue-500' },
-  Claude: { label: 'Claude 3.5 Sonnet', bg: 'bg-amber-50 dark:bg-amber-950/60 border-amber-200 dark:border-amber-800/60', text: 'text-amber-700 dark:text-amber-300', dot: 'bg-amber-500' },
+  Claude: { label: 'Claude Haiku 4.5', bg: 'bg-amber-50 dark:bg-amber-950/60 border-amber-200 dark:border-amber-800/60', text: 'text-amber-700 dark:text-amber-300', dot: 'bg-amber-500' },
   Copilot: { label: 'Bing Copilot', bg: 'bg-purple-50 dark:bg-purple-950/60 border-purple-200 dark:border-purple-800/60', text: 'text-purple-700 dark:text-purple-300', dot: 'bg-purple-500' },
 };
 

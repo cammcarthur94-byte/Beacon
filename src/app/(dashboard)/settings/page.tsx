@@ -509,7 +509,7 @@ export default function SettingsPage() {
                 { name: 'ChatGPT', provider: 'OpenAI GPT-4o', color: 'bg-emerald-500' },
                 { name: 'Perplexity', provider: 'Sonar Online Search', color: 'bg-cyan-500' },
                 { name: 'Gemini', provider: 'Google Gemini 1.5 Pro', color: 'bg-blue-500' },
-                { name: 'Claude', provider: 'Anthropic Claude 3.5 Sonnet', color: 'bg-amber-500' },
+                { name: 'Claude', provider: 'Anthropic Claude Haiku 4.5', color: 'bg-amber-500' },
                 { name: 'Copilot', provider: 'Microsoft Bing Copilot', color: 'bg-purple-500' },
               ].map((model) => {
                 const isSelected = defaultEngines.includes(model.name);

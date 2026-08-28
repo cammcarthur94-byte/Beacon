@@ -132,9 +132,10 @@ export async function queryClaude(prompt: string): Promise<{ text: string; model
 
   const candidateModels = [
     process.env.ANTHROPIC_MODEL,
+    'claude-haiku-4.5-20251001',
+    'claude-3-5-haiku-20241022',
     'claude-sonnet-4-5-20250929',
     'claude-3-5-sonnet-20241022',
-    'claude-3-5-haiku-20241022',
     'claude-3-haiku-20240307',
   ].filter(Boolean) as string[];
 

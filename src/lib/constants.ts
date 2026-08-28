@@ -18,7 +18,7 @@ export const AI_ENGINES: Record<AIEngine, EngineMeta> = {
   claude: {
     id: 'claude',
     name: 'Claude',
-    model: 'Claude 3.5 Sonnet',
+    model: 'Claude Haiku 4.5',
     color: '#d97706',
     iconName: 'Sparkles',
   },

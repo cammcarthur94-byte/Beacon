@@ -92,12 +92,12 @@ ${aiResponse}`;
     }
   }
 
-  // 2. Try Anthropic Claude 3.5 Sonnet
+  // 2. Try Anthropic Claude Haiku 4.5
   const anthropic = getAnthropicClient();
   if (anthropic) {
     try {
       const response = await anthropic.messages.create({
-        model: 'claude-3-5-sonnet-20241022',
+        model: 'claude-haiku-4.5-20251001',
         max_tokens: 1500,
         system: GEO_RECOMMENDATION_SYSTEM_PROMPT,
         messages: [
