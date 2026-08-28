@@ -141,31 +141,35 @@ export function ScheduleAuditsModal({
               <Switch
                 checked={isEnabled}
                 onCheckedChange={setIsEnabled}
+                aria-label="Automated Background Auditing"
                 className="data-[state=checked]:bg-blue-600"
               />
             </div>
 
             {/* Frequency Selection Options */}
             <div className="space-y-2">
-              <label className="text-xs font-semibold text-gray-700 dark:text-zinc-300">
+              <label id="frequency-label" className="text-xs font-semibold text-gray-700 dark:text-zinc-300">
                 Audit Frequency Interval
               </label>
-              <div className="grid grid-cols-1 gap-2">
+              <div role="radiogroup" aria-labelledby="frequency-label" className="grid grid-cols-1 gap-2">
                 {frequencies.map((f) => {
                   const isSelected = frequency === f.key;
                   return (
-                    <div
+                    <button
                       key={f.key}
+                      type="button"
+                      role="radio"
+                      aria-checked={isSelected}
                       onClick={() => setFrequency(f.key)}
                       className={cn(
-                        'p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between select-none',
+                        'p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between select-none text-left w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500',
                         isSelected
                           ? 'border-blue-500 bg-blue-50/30 dark:bg-blue-950/20 ring-1 ring-blue-500 shadow-xs'
                           : 'border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-gray-300 dark:hover:border-zinc-700'
                       )}
                     >
                       <div className="flex items-center gap-3">
-                        <span className="text-base">{f.icon}</span>
+                        <span className="text-base" aria-hidden="true">{f.icon}</span>
                         <div>
                           <div className="text-xs font-semibold text-gray-900 dark:text-zinc-100">
                             {f.label}
@@ -175,13 +179,16 @@ export function ScheduleAuditsModal({
                           </div>
                         </div>
                       </div>
-                      <div className={cn(
-                        'w-4 h-4 rounded-full border flex items-center justify-center transition-all',
-                        isSelected ? 'border-blue-600 bg-blue-600 text-white' : 'border-gray-300 dark:border-zinc-700'
-                      )}>
+                      <div
+                        aria-hidden="true"
+                        className={cn(
+                          'w-4 h-4 rounded-full border flex items-center justify-center transition-all shrink-0',
+                          isSelected ? 'border-blue-600 bg-blue-600 text-white' : 'border-gray-300 dark:border-zinc-700'
+                        )}
+                      >
                         {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
                       </div>
-                    </div>
+                    </button>
                   );
                 })}
               </div>
