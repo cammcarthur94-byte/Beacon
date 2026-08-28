@@ -29,7 +29,7 @@ export async function getPrompts(brandId?: string): Promise<{ success: boolean; 
     if (brandId) {
       userBrandIds = [brandId];
     } else {
-      const { data: userBrands } = await admin
+      let { data: userBrands } = await admin
         .from('brands')
         .select('id')
         .eq('user_id', userId);
@@ -37,19 +37,31 @@ export async function getPrompts(brandId?: string): Promise<{ success: boolean; 
       userBrandIds = (userBrands || []).map((b) => b.id);
 
       if (userBrandIds.length === 0) {
-        // Ensure default brand exists
-        const { data: newBrand } = await admin
+        // Check if any existing brand is in the database
+        const { data: anyBrand } = await admin
           .from('brands')
-          .insert({
-            user_id: userId,
-            brand_name: 'Acme Sync',
-            domain: 'acmelabs.com',
-            competitors: ['OmniSync', 'Nexus AI', 'Apex Platform'],
-          })
           .select('id')
-          .single();
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
 
-        if (newBrand) userBrandIds = [newBrand.id];
+        if (anyBrand?.id) {
+          userBrandIds = [anyBrand.id];
+        } else {
+          // Ensure default brand exists
+          const { data: newBrand } = await admin
+            .from('brands')
+            .insert({
+              user_id: userId,
+              brand_name: 'Acme Sync',
+              domain: 'acmelabs.com',
+              competitors: ['OmniSync', 'Nexus AI', 'Apex Platform'],
+            })
+            .select('id')
+            .single();
+
+          if (newBrand) userBrandIds = [newBrand.id];
+        }
       }
     }
 
@@ -207,6 +219,19 @@ export async function createPrompt(payload: {
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();
+
+      if (!brand) {
+        const { data: anyBrand } = await admin
+          .from('brands')
+          .select('id')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (anyBrand?.id) {
+          brand = anyBrand;
+        }
+      }
 
       if (!brand) {
         const { data: newBrand, error: brandErr } = await admin
