@@ -50,7 +50,6 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { name: 'Prompts', href: '/prompts', icon: FileSearch },
       { name: 'Response History', href: '/responses', icon: History },
-      { name: 'Competitor Intel', href: '/brand-kit', icon: Users },
       { name: 'Source Intelligence', href: '/visibility-matrix', icon: Globe },
     ],
   },
