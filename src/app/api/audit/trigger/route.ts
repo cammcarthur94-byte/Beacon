@@ -3,7 +3,8 @@ import { getCurrentUserId } from '@/lib/auth-helpers';
 import { getSupabaseAdmin } from '@/lib/supabase/admin';
 import { dispatchAuditForPrompt, PromptAuditResult } from '@/lib/ai/dispatcher';
 import { runRecommendationEngineForAuditResults } from '@/lib/ai/recommendation-engine';
-import { PromptWithBrand } from '@/types/geo';
+import { PromptWithBrand, AIEngine } from '@/types/geo';
+
 
 export const maxDuration = 300;
 export const dynamic = 'force-dynamic';
@@ -13,10 +14,17 @@ export const dynamic = 'force-dynamic';
  * Triggers an immediate evaluation audit across all AI engines
  * for the logged-in user's active prompts.
  */
-export async function POST(_request: NextRequest) {
+export async function POST(request: NextRequest) {
   const startTime = Date.now();
 
   try {
+    let body: { promptIds?: string[] } = {};
+    try {
+      body = await request.json();
+    } catch {
+      // Empty or non-JSON body is acceptable (defaults to all active prompts)
+    }
+
     const userId = await getCurrentUserId();
     const admin = getSupabaseAdmin();
 
@@ -53,12 +61,19 @@ export async function POST(_request: NextRequest) {
       );
     }
 
-    // 2. Get active prompts for this brand
-    const { data: promptRows, error: promptErr } = await admin
+    // 2. Get prompts for this brand (filtered by promptIds if provided)
+    let promptQuery = admin
       .from('prompts')
       .select('*')
-      .eq('brand_id', brandRow.id)
-      .eq('is_active', true);
+      .eq('brand_id', brandRow.id);
+
+    if (body.promptIds && Array.isArray(body.promptIds) && body.promptIds.length > 0) {
+      promptQuery = promptQuery.in('id', body.promptIds);
+    } else {
+      promptQuery = promptQuery.eq('is_active', true);
+    }
+
+    const { data: promptRows, error: promptErr } = await promptQuery;
 
     if (promptErr) {
       return NextResponse.json(
@@ -74,7 +89,7 @@ export async function POST(_request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error: 'No active prompts found. Add and activate prompts in your Brand Kit first.',
+          error: 'No matching active prompts found to audit.',
         },
         { status: 400 }
       );
@@ -91,28 +106,37 @@ export async function POST(_request: NextRequest) {
       domain: `${c.toLowerCase().replace(/[^a-z0-9]/g, '')}.com`,
     }));
 
-    const promptsToAudit: PromptWithBrand[] = promptRows.map((p) => ({
-      id: p.id,
-      brand_id: brandRow.id,
-      query: p.query,
-      category: 'High-Intent Commercial',
-      priority: 'high',
-      engines_tracked: userTier === 'pro' || userTier === 'enterprise'
-        ? ['chatgpt', 'claude', 'perplexity', 'gemini', 'copilot', 'google_aio']
-        : ['chatgpt', 'claude', 'perplexity', 'gemini'],
-      is_active: true,
-      subscription_tier: userTier,
-      brands: {
-        id: brandRow.id,
-        name: brandRow.brand_name,
-        domain: (brandRow as any).domain || `${brandRow.brand_name.toLowerCase().replace(/[^a-z0-9]/g, '')}.com`,
+    const promptsToAudit: PromptWithBrand[] = promptRows.map((p) => {
+      // Map stored target engines to normalized engine identifiers
+      const customEngines: AIEngine[] = Array.isArray(p.target_engines) && p.target_engines.length > 0
+        ? (p.target_engines.map((e: string) => e.toLowerCase().replace(/\s+/g, '_')) as AIEngine[])
+        : userTier === 'pro' || userTier === 'enterprise'
+        ? (['chatgpt', 'claude', 'perplexity', 'gemini', 'copilot', 'google_aio'] as AIEngine[])
+        : (['chatgpt', 'claude', 'perplexity', 'gemini'] as AIEngine[]);
+
+      return {
+        id: p.id,
+        brand_id: brandRow.id,
+        query: p.query,
+        category: 'High-Intent Commercial',
+        priority: 'high',
+        engines_tracked: customEngines,
+        is_active: true,
         subscription_tier: userTier,
-        competitors: formattedCompetitors,
-      },
-    }));
+        brands: {
+          id: brandRow.id,
+          name: brandRow.brand_name,
+          domain: (brandRow as any).domain || `${brandRow.brand_name.toLowerCase().replace(/[^a-z0-9]/g, '')}.com`,
+          subscription_tier: userTier,
+          competitors: formattedCompetitors,
+        },
+      };
+    });
+
 
     // 3. Execute audits for the active prompts
     const auditResults: PromptAuditResult[] = [];
+
     for (const prompt of promptsToAudit) {
       try {
         const result = await dispatchAuditForPrompt(admin, prompt);

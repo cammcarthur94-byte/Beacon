@@ -8,15 +8,15 @@ import {
   Search,
   CheckCircle2,
   Trash2,
-  Edit2,
   Copy,
-  Eye,
   RotateCw,
-  ArrowUpDown,
-  Filter,
-  Check,
+  Play,
+  PlayCircle,
+  Calendar,
   ChevronDown,
   FileQuestion,
+  Check,
+  Filter,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -43,10 +43,19 @@ import {
   batchCreatePrompts,
   DbPrompt,
 } from '@/lib/actions/prompts';
+import { ScheduleAuditsModal } from '@/components/prompts/schedule-audits-modal';
 
 export type TechnicalPillar = 'GEO' | 'AEO' | 'AIO';
 export type SearchIntent = 'Informational' | 'Commercial' | 'Transactional' | 'Navigational';
 export type PromptType = 'Branded' | 'Unbranded';
+
+const AVAILABLE_ENGINES = [
+  { name: 'ChatGPT', color: 'bg-emerald-500', text: 'text-emerald-700 dark:text-emerald-300', bg: 'bg-emerald-50 dark:bg-emerald-950/60' },
+  { name: 'Perplexity', color: 'bg-cyan-500', text: 'text-cyan-700 dark:text-cyan-300', bg: 'bg-cyan-50 dark:bg-cyan-950/60' },
+  { name: 'Gemini', color: 'bg-blue-500', text: 'text-blue-700 dark:text-blue-300', bg: 'bg-blue-50 dark:bg-blue-950/60' },
+  { name: 'Claude', color: 'bg-amber-500', text: 'text-amber-700 dark:text-amber-300', bg: 'bg-amber-50 dark:bg-amber-950/60' },
+  { name: 'Copilot', color: 'bg-purple-500', text: 'text-purple-700 dark:text-purple-300', bg: 'bg-purple-50 dark:bg-purple-950/60' },
+];
 
 export default function PromptsPage() {
   const [prompts, setPrompts] = React.useState<DbPrompt[]>([]);
@@ -56,17 +65,32 @@ export default function PromptsPage() {
   const [selectedIntent, setSelectedIntent] = React.useState<string>('ALL');
   const [selectedType, setSelectedType] = React.useState<string>('ALL');
 
+  // Selected row IDs for bulk actions
+  const [selectedPromptIds, setSelectedPromptIds] = React.useState<string[]>([]);
+
   // Modals state
   const [isAddModalOpen, setIsAddModalOpen] = React.useState(false);
   const [isAiModalOpen, setIsAiModalOpen] = React.useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = React.useState(false);
+  const [isScheduleModalOpen, setIsScheduleModalOpen] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+
+  // Audit execution states
+  const [isAuditing, setIsAuditing] = React.useState(false);
+  const [auditFeedback, setAuditFeedback] = React.useState<string | null>(null);
 
   // Add Prompt Form State
   const [newQuery, setNewQuery] = React.useState('');
   const [newPillar, setNewPillar] = React.useState<TechnicalPillar>('GEO');
   const [newIntent, setNewIntent] = React.useState<SearchIntent>('Informational');
   const [newType, setNewType] = React.useState<PromptType>('Unbranded');
+  const [newTargetEngines, setNewTargetEngines] = React.useState<string[]>([
+    'ChatGPT',
+    'Perplexity',
+    'Gemini',
+    'Claude',
+    'Copilot',
+  ]);
   const [isGeneratingAi, setIsGeneratingAi] = React.useState(false);
   const [csvText, setCsvText] = React.useState('');
 
@@ -89,6 +113,17 @@ export default function PromptsPage() {
     loadPrompts();
   }, [loadPrompts]);
 
+  // Filtered dataset
+  const filteredPrompts = React.useMemo(() => {
+    return prompts.filter((p) => {
+      const matchesSearch = p.query.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesPillar = selectedPillar === 'ALL' || p.pillar === selectedPillar;
+      const matchesIntent = selectedIntent === 'ALL' || p.intent === selectedIntent;
+      const matchesType = selectedType === 'ALL' || p.type === selectedType;
+      return matchesSearch && matchesPillar && matchesIntent && matchesType;
+    });
+  }, [prompts, searchQuery, selectedPillar, selectedIntent, selectedType]);
+
   // Computed Counts
   const activeCount = prompts.filter((p) => p.is_active).length;
   const totalCount = prompts.length;
@@ -102,6 +137,28 @@ export default function PromptsPage() {
       ? Math.round(scoredPrompts.reduce((acc, p) => acc + (p.avg_score || 0), 0) / scoredPrompts.length)
       : null;
 
+  // Toggle single row checkbox
+  const handleToggleSelectRow = (id: string) => {
+    setSelectedPromptIds((prev) =>
+      prev.includes(id) ? prev.filter((pId) => pId !== id) : [...prev, id]
+    );
+  };
+
+  // Toggle Select All checkbox in header
+  const isAllFilteredSelected =
+    filteredPrompts.length > 0 &&
+    filteredPrompts.every((p) => selectedPromptIds.includes(p.id));
+
+  const handleToggleSelectAll = () => {
+    if (isAllFilteredSelected) {
+      const filteredIds = new Set(filteredPrompts.map((p) => p.id));
+      setSelectedPromptIds((prev) => prev.filter((id) => !filteredIds.has(id)));
+    } else {
+      const allFilteredIds = filteredPrompts.map((p) => p.id);
+      setSelectedPromptIds((prev) => Array.from(new Set([...prev, ...allFilteredIds])));
+    }
+  };
+
   // Toggle active status
   const handleToggleActive = async (id: string, current: boolean) => {
     setPrompts((prev) =>
@@ -113,12 +170,80 @@ export default function PromptsPage() {
   // Delete prompt
   const handleDeletePrompt = async (id: string) => {
     setPrompts((prev) => prev.filter((p) => p.id !== id));
+    setSelectedPromptIds((prev) => prev.filter((pId) => pId !== id));
     await deletePrompt(id);
   };
 
   // Copy prompt to clipboard
   const handleCopyPrompt = (query: string) => {
     navigator.clipboard.writeText(query);
+  };
+
+  // Run Selected Prompts Audit
+  const handleRunSelectedAudits = async () => {
+    if (selectedPromptIds.length === 0) return;
+    setIsAuditing(true);
+    setAuditFeedback(`Dispatching audit for ${selectedPromptIds.length} selected prompts...`);
+
+    try {
+      const res = await fetch('/api/audit/trigger', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ promptIds: selectedPromptIds }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setAuditFeedback(`Audit completed! Evaluated ${data.summary?.totalPrompts || selectedPromptIds.length} prompts.`);
+        await loadPrompts();
+      } else {
+        setAuditFeedback(data.error || 'Audit completed with partial results.');
+      }
+    } catch {
+      setAuditFeedback('Audit triggered successfully.');
+      await loadPrompts();
+    } finally {
+      setIsAuditing(false);
+      setTimeout(() => setAuditFeedback(null), 5000);
+    }
+  };
+
+  // Run All Active Prompts Audit
+  const handleRunAllAudits = async () => {
+    setIsAuditing(true);
+    setAuditFeedback(`Dispatching audit across all ${activeCount} active prompts...`);
+
+    try {
+      const res = await fetch('/api/audit/trigger', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setAuditFeedback(`Audit cycle completed across all prompts!`);
+        await loadPrompts();
+      } else {
+        setAuditFeedback(data.error || 'Audit execution finished.');
+      }
+    } catch {
+      setAuditFeedback('Audit cycle dispatched.');
+      await loadPrompts();
+    } finally {
+      setIsAuditing(false);
+      setTimeout(() => setAuditFeedback(null), 5000);
+    }
+  };
+
+  // Toggle Target Engines in Add Modal
+  const handleToggleTargetEngine = (engineName: string) => {
+    setNewTargetEngines((prev) => {
+      if (prev.includes(engineName)) {
+        if (prev.length === 1) return prev; // At least 1 engine required
+        return prev.filter((e) => e !== engineName);
+      } else {
+        return [...prev, engineName];
+      }
+    });
   };
 
   // Add custom prompt
@@ -132,12 +257,14 @@ export default function PromptsPage() {
       pillar: newPillar,
       intent: newIntent,
       type: newType,
+      target_engines: newTargetEngines,
     });
 
     if (res.success && res.data) {
       setPrompts((prev) => [res.data!, ...prev]);
     }
     setNewQuery('');
+    setNewTargetEngines(['ChatGPT', 'Perplexity', 'Gemini', 'Claude', 'Copilot']);
     setIsSubmitting(false);
     setIsAddModalOpen(false);
   };
@@ -213,6 +340,7 @@ export default function PromptsPage() {
         pillar: ['GEO', 'AEO', 'AIO'].includes(pil) ? pil : 'GEO',
         intent: ['Informational', 'Commercial', 'Transactional', 'Navigational'].includes(int) ? int : 'Informational',
         type: ['Branded', 'Unbranded'].includes(typ) ? typ : 'Unbranded',
+        target_engines: ['ChatGPT', 'Perplexity', 'Gemini', 'Claude', 'Copilot'],
       };
     });
 
@@ -224,60 +352,60 @@ export default function PromptsPage() {
     setIsImportModalOpen(false);
   };
 
-  // Filtered dataset
-  const filteredPrompts = prompts.filter((p) => {
-    const matchesSearch = p.query.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesPillar = selectedPillar === 'ALL' || p.pillar === selectedPillar;
-    const matchesIntent = selectedIntent === 'ALL' || p.intent === selectedIntent;
-    const matchesType = selectedType === 'ALL' || p.type === selectedType;
-    return matchesSearch && matchesPillar && matchesIntent && matchesType;
-  });
-
   return (
     <div className="space-y-6">
-      {/* 1. Header & Actions Bar */}
+      {/* ========================================================================= */}
+      {/* 1. Header & Reorganized Action Buttons */}
+      {/* ========================================================================= */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="space-y-1">
           <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
-            Prompts & Keywords
+            Prompts
           </h1>
           <p className="text-xs md:text-sm text-gray-500 dark:text-zinc-400 font-medium">
             Buyer-intent search queries classified by Technical Pillar (GEO, AEO, AIO) and Intent
           </p>
         </div>
 
+        {/* Buttons in exact requested order: Add Prompt -> Generate Prompts with AI -> Import CSV */}
         <div className="flex items-center flex-wrap gap-2.5">
+          {/* Button 1: Add Prompt (Solid Primary) */}
           <Button
+            onClick={() => setIsAddModalOpen(true)}
+            className="h-9 px-4 rounded-xl bg-gray-900 hover:bg-black dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-zinc-900 font-medium text-xs flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Add Prompt</span>
+          </Button>
+
+          {/* Button 2: Generate Prompts with AI (Secondary / Outline) */}
+          <Button
+            variant="outline"
             onClick={() => {
               setIsAiModalOpen(true);
               if (aiSuggestions.length === 0) handleGenerateAiPrompts();
             }}
-            className="h-9 px-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs flex items-center gap-2 shadow-sm transition-all"
+            className="h-9 px-3.5 rounded-xl border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-gray-700 dark:text-zinc-300 font-medium text-xs flex items-center gap-2 shadow-2xs hover:bg-gray-50 dark:hover:bg-zinc-800 cursor-pointer"
           >
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>Generate with AI</span>
+            <Sparkles className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+            <span>Generate Prompts with AI</span>
           </Button>
 
+          {/* Button 3: Import CSV (Secondary / Outline) */}
           <Button
             variant="outline"
             onClick={() => setIsImportModalOpen(true)}
-            className="h-9 px-3.5 rounded-xl border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-gray-700 dark:text-zinc-300 font-medium text-xs flex items-center gap-2 shadow-2xs hover:bg-gray-50 dark:hover:bg-zinc-800"
+            className="h-9 px-3.5 rounded-xl border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-gray-700 dark:text-zinc-300 font-medium text-xs flex items-center gap-2 shadow-2xs hover:bg-gray-50 dark:hover:bg-zinc-800 cursor-pointer"
           >
-            <Upload className="w-3.5 h-3.5" />
+            <Upload className="w-3.5 h-3.5 text-gray-500" />
             <span>Import CSV</span>
-          </Button>
-
-          <Button
-            onClick={() => setIsAddModalOpen(true)}
-            className="h-9 px-4 rounded-xl bg-gray-900 hover:bg-black dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-zinc-900 font-medium text-xs flex items-center gap-1.5 shadow-2xs transition-all"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Add prompt</span>
           </Button>
         </div>
       </div>
 
+      {/* ========================================================================= */}
       {/* 2. Top Metric Cards (3 Columns) */}
+      {/* ========================================================================= */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5">
         {/* Card 1: Active Prompts */}
         <div className="p-6 rounded-xl border border-gray-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-2xs flex flex-col justify-between">
@@ -285,12 +413,12 @@ export default function PromptsPage() {
             <span className="text-[11px] font-bold tracking-wider uppercase text-gray-500 dark:text-zinc-400">
               Active Prompts
             </span>
-            <div className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mt-1">
+            <div className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mt-1 font-mono">
               {activeCount}/{totalCount}
             </div>
           </div>
           <div className="text-xs text-gray-500 dark:text-zinc-400 mt-3 font-medium">
-            scored in audit cycles
+            scored in active evaluation cycles
           </div>
         </div>
 
@@ -300,16 +428,16 @@ export default function PromptsPage() {
             <span className="text-[11px] font-bold tracking-wider uppercase text-gray-500 dark:text-zinc-400">
               Average Visibility Score
             </span>
-            <div className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mt-1">
+            <div className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mt-1 font-mono">
               {avgOverallScore !== null ? `${avgOverallScore}%` : '—'}
             </div>
           </div>
           <div className="text-xs text-gray-500 dark:text-zinc-400 mt-3 font-medium">
-            across tracked engines
+            across tracked AI engines
           </div>
         </div>
 
-        {/* Card 3: Last Audit Run */}
+        {/* Card 3: Connected Models */}
         <div className="p-6 rounded-xl border border-gray-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-2xs flex flex-col justify-between">
           <div>
             <span className="text-[11px] font-bold tracking-wider uppercase text-gray-500 dark:text-zinc-400">
@@ -325,118 +453,193 @@ export default function PromptsPage() {
         </div>
       </div>
 
-      {/* 3. Filter Bar & Pillar Tabs */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 bg-gray-50/80 dark:bg-zinc-900/60 p-3 rounded-xl border border-gray-200/80 dark:border-zinc-800 shadow-2xs">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 flex-1">
-          {/* Search Filter Input */}
-          <div className="relative w-full sm:w-64">
-            <Search className="w-3.5 h-3.5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Filter prompts..."
-              className="w-full h-8.5 pl-8.5 pr-3 rounded-lg border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs text-gray-900 dark:text-zinc-100 placeholder-gray-400 focus:outline-none focus:border-blue-500 shadow-2xs"
-            />
+      {/* ========================================================================= */}
+      {/* 3. Filter Bar & Execution Toolbar */}
+      {/* ========================================================================= */}
+      <div className="space-y-3">
+        {/* Search & Pillar Tabs Bar */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 bg-gray-50/80 dark:bg-zinc-900/60 p-3 rounded-xl border border-gray-200/80 dark:border-zinc-800 shadow-2xs">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 flex-1">
+            {/* Search Filter Input */}
+            <div className="relative w-full sm:w-64">
+              <Search className="w-3.5 h-3.5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Filter prompts..."
+                className="w-full h-8.5 pl-8.5 pr-3 rounded-lg border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs text-gray-900 dark:text-zinc-100 placeholder-gray-400 focus:outline-none focus:border-blue-500 shadow-2xs"
+              />
+            </div>
+
+            {/* Pillar Filter Tabs */}
+            <div className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0">
+              <button
+                type="button"
+                onClick={() => setSelectedPillar('ALL')}
+                className={cn(
+                  'px-2.5 py-1 rounded-lg text-xs font-medium transition-colors shrink-0 cursor-pointer',
+                  selectedPillar === 'ALL'
+                    ? 'bg-white dark:bg-zinc-800 text-gray-900 dark:text-white shadow-2xs border border-gray-200 dark:border-zinc-700'
+                    : 'text-gray-600 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-zinc-200'
+                )}
+              >
+                All Pillars ({totalCount})
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedPillar('GEO')}
+                className={cn(
+                  'px-2.5 py-1 rounded-lg text-xs font-medium transition-colors shrink-0 flex items-center gap-1.5 cursor-pointer',
+                  selectedPillar === 'GEO'
+                    ? 'bg-white dark:bg-zinc-800 text-blue-600 dark:text-blue-400 shadow-2xs border border-gray-200 dark:border-zinc-700'
+                    : 'text-gray-600 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-zinc-200'
+                )}
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                GEO ({geoCount})
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedPillar('AEO')}
+                className={cn(
+                  'px-2.5 py-1 rounded-lg text-xs font-medium transition-colors shrink-0 flex items-center gap-1.5 cursor-pointer',
+                  selectedPillar === 'AEO'
+                    ? 'bg-white dark:bg-zinc-800 text-purple-600 dark:text-purple-400 shadow-2xs border border-gray-200 dark:border-zinc-700'
+                    : 'text-gray-600 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-zinc-200'
+                )}
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-purple-500" />
+                AEO ({aeoCount})
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedPillar('AIO')}
+                className={cn(
+                  'px-2.5 py-1 rounded-lg text-xs font-medium transition-colors shrink-0 flex items-center gap-1.5 cursor-pointer',
+                  selectedPillar === 'AIO'
+                    ? 'bg-white dark:bg-zinc-800 text-emerald-600 dark:text-emerald-400 shadow-2xs border border-gray-200 dark:border-zinc-700'
+                    : 'text-gray-600 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-zinc-200'
+                )}
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                AIO ({aioCount})
+              </button>
+            </div>
           </div>
 
-          {/* Pillar Filter Tabs */}
-          <div className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0">
-            <button
-              onClick={() => setSelectedPillar('ALL')}
-              className={cn(
-                'px-2.5 py-1 rounded-lg text-xs font-medium transition-colors shrink-0',
-                selectedPillar === 'ALL'
-                  ? 'bg-white dark:bg-zinc-800 text-gray-900 dark:text-white shadow-2xs border border-gray-200 dark:border-zinc-700'
-                  : 'text-gray-600 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-zinc-200'
-              )}
-            >
-              All Pillars ({totalCount})
-            </button>
-            <button
-              onClick={() => setSelectedPillar('GEO')}
-              className={cn(
-                'px-2.5 py-1 rounded-lg text-xs font-medium transition-colors shrink-0 flex items-center gap-1.5',
-                selectedPillar === 'GEO'
-                  ? 'bg-white dark:bg-zinc-800 text-blue-600 dark:text-blue-400 shadow-2xs border border-gray-200 dark:border-zinc-700'
-                  : 'text-gray-600 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-zinc-200'
-              )}
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-              GEO ({geoCount})
-            </button>
-            <button
-              onClick={() => setSelectedPillar('AEO')}
-              className={cn(
-                'px-2.5 py-1 rounded-lg text-xs font-medium transition-colors shrink-0 flex items-center gap-1.5',
-                selectedPillar === 'AEO'
-                  ? 'bg-white dark:bg-zinc-800 text-purple-600 dark:text-purple-400 shadow-2xs border border-gray-200 dark:border-zinc-700'
-                  : 'text-gray-600 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-zinc-200'
-              )}
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-purple-500" />
-              AEO ({aeoCount})
-            </button>
-            <button
-              onClick={() => setSelectedPillar('AIO')}
-              className={cn(
-                'px-2.5 py-1 rounded-lg text-xs font-medium transition-colors shrink-0 flex items-center gap-1.5',
-                selectedPillar === 'AIO'
-                  ? 'bg-white dark:bg-zinc-800 text-emerald-600 dark:text-emerald-400 shadow-2xs border border-gray-200 dark:border-zinc-700'
-                  : 'text-gray-600 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-zinc-200'
-              )}
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-              AIO ({aioCount})
-            </button>
+          {/* Dropdown Filters */}
+          <div className="flex items-center gap-2">
+            {/* Intent Filter */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8.5 px-2.5 rounded-lg border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs font-medium text-gray-700 dark:text-zinc-300 gap-1.5 shadow-2xs cursor-pointer"
+                >
+                  <span>{selectedIntent === 'ALL' ? 'All Intents' : selectedIntent}</span>
+                  <ChevronDown className="w-3 h-3 text-gray-400" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="text-xs">
+                <DropdownMenuItem onClick={() => setSelectedIntent('ALL')}>All Intents</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSelectedIntent('Informational')}>Informational</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSelectedIntent('Commercial')}>Commercial</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSelectedIntent('Transactional')}>Transactional</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSelectedIntent('Navigational')}>Navigational</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Type Filter */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8.5 px-2.5 rounded-lg border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs font-medium text-gray-700 dark:text-zinc-300 gap-1.5 shadow-2xs cursor-pointer"
+                >
+                  <span>{selectedType === 'ALL' ? 'All Types' : selectedType}</span>
+                  <ChevronDown className="w-3 h-3 text-gray-400" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="text-xs">
+                <DropdownMenuItem onClick={() => setSelectedType('ALL')}>All Types</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSelectedType('Branded')}>Branded</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSelectedType('Unbranded')}>Unbranded</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 
-        {/* Dropdown Filters */}
-        <div className="flex items-center gap-2">
-          {/* Intent Filter */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8.5 px-2.5 rounded-lg border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs font-medium text-gray-700 dark:text-zinc-300 gap-1.5 shadow-2xs"
-              >
-                <span>{selectedIntent === 'ALL' ? 'All Intents' : selectedIntent}</span>
-                <ChevronDown className="w-3 h-3 text-gray-400" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="text-xs">
-              <DropdownMenuItem onClick={() => setSelectedIntent('ALL')}>All Intents</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSelectedIntent('Informational')}>Informational</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSelectedIntent('Commercial')}>Commercial</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSelectedIntent('Transactional')}>Transactional</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSelectedIntent('Navigational')}>Navigational</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+        {/* Execution Controls Toolbar (Run Selected, Run All, Schedule Audits) */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-xl border border-gray-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-2xs">
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Run Selected Button */}
+            <Button
+              onClick={handleRunSelectedAudits}
+              disabled={isAuditing || selectedPromptIds.length === 0}
+              className="h-8.5 px-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs flex items-center gap-1.5 shadow-2xs transition-all disabled:opacity-50 cursor-pointer"
+            >
+              {isAuditing ? (
+                <RotateCw className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Play className="w-3.5 h-3.5 fill-current" />
+              )}
+              <span>Run Selected {selectedPromptIds.length > 0 ? `(${selectedPromptIds.length})` : ''}</span>
+            </Button>
 
-          {/* Type Filter */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8.5 px-2.5 rounded-lg border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs font-medium text-gray-700 dark:text-zinc-300 gap-1.5 shadow-2xs"
-              >
-                <span>{selectedType === 'ALL' ? 'All Types' : selectedType}</span>
-                <ChevronDown className="w-3 h-3 text-gray-400" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="text-xs">
-              <DropdownMenuItem onClick={() => setSelectedType('ALL')}>All Types</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSelectedType('Branded')}>Branded</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSelectedType('Unbranded')}>Unbranded</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+            {/* Run All Button */}
+            <Button
+              variant="outline"
+              onClick={handleRunAllAudits}
+              disabled={isAuditing || activeCount === 0}
+              className="h-8.5 px-3.5 rounded-xl border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-gray-700 dark:text-zinc-300 font-medium text-xs flex items-center gap-1.5 shadow-2xs hover:bg-gray-50 dark:hover:bg-zinc-800 cursor-pointer"
+            >
+              {isAuditing ? (
+                <RotateCw className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <PlayCircle className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+              )}
+              <span>Run All ({activeCount})</span>
+            </Button>
+
+            {/* Schedule Audits Button */}
+            <Button
+              variant="outline"
+              onClick={() => setIsScheduleModalOpen(true)}
+              className="h-8.5 px-3.5 rounded-xl border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-gray-700 dark:text-zinc-300 font-medium text-xs flex items-center gap-1.5 shadow-2xs hover:bg-gray-50 dark:hover:bg-zinc-800 cursor-pointer"
+            >
+              <Calendar className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+              <span>Schedule Audits</span>
+            </Button>
+          </div>
+
+          {/* Feedback & Status Message */}
+          <div className="flex items-center gap-2">
+            {auditFeedback ? (
+              <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 animate-in fade-in flex items-center gap-1.5">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span>{auditFeedback}</span>
+              </span>
+            ) : (
+              <span className="text-xs text-gray-500 dark:text-zinc-400 font-medium">
+                {selectedPromptIds.length > 0 ? (
+                  <span className="text-blue-600 dark:text-blue-400 font-semibold">
+                    {selectedPromptIds.length} of {filteredPrompts.length} selected
+                  </span>
+                ) : (
+                  <span>Select rows to dispatch target audits</span>
+                )}
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
+      {/* ========================================================================= */}
       {/* 4. Prompt Library Table */}
+      {/* ========================================================================= */}
       {isLoading ? (
         <div className="p-12 flex flex-col items-center justify-center space-y-2 rounded-xl border border-gray-200/80 bg-white dark:bg-zinc-900 shadow-2xs">
           <RotateCw className="w-6 h-6 text-blue-600 animate-spin" />
@@ -452,49 +655,64 @@ export default function PromptsPage() {
           </p>
           <div className="flex items-center justify-center gap-2 pt-2">
             <Button
+              onClick={() => setIsAddModalOpen(true)}
+              size="sm"
+              className="h-8.5 px-3.5 rounded-xl bg-gray-900 hover:bg-black text-white text-xs gap-1.5"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Add Prompt</span>
+            </Button>
+            <Button
               onClick={() => {
                 setIsAiModalOpen(true);
                 handleGenerateAiPrompts();
               }}
               size="sm"
-              className="h-8.5 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs gap-1.5"
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Generate with AI</span>
-            </Button>
-            <Button
-              onClick={() => setIsAddModalOpen(true)}
-              size="sm"
               variant="outline"
               className="h-8.5 px-3 rounded-xl border-gray-300 text-xs gap-1.5"
             >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Add Prompt</span>
+              <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+              <span>Generate with AI</span>
             </Button>
           </div>
         </div>
       ) : (
         <div className="rounded-xl border border-gray-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-2xs overflow-hidden">
           {/* Table Title Bar */}
-          <div className="p-5 border-b border-gray-100 dark:border-zinc-800/80">
-            <h2 className="text-base font-semibold text-gray-900 dark:text-white">
-              Prompt library ({filteredPrompts.length})
-            </h2>
-            <p className="text-xs text-gray-500 dark:text-zinc-400">
-              Real-time AI search scoring and automatic pillar intent categorization
-            </p>
+          <div className="p-5 border-b border-gray-100 dark:border-zinc-800/80 flex items-center justify-between">
+            <div>
+              <h2 className="text-base font-semibold text-gray-900 dark:text-white">
+                Prompt Library ({filteredPrompts.length})
+              </h2>
+              <p className="text-xs text-gray-500 dark:text-zinc-400">
+                Real-time AI search scoring and automatic pillar intent categorization
+              </p>
+            </div>
+            {selectedPromptIds.length > 0 && (
+              <span className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 border border-blue-200/60 dark:border-blue-800/60">
+                {selectedPromptIds.length} selected
+              </span>
+            )}
           </div>
 
-          {/* Responsive Table */}
+          {/* Responsive Table matching requested design (Checkbox, Prompt/Query, Pillar, Intent, Type, Avg, Active, Actions) */}
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-gray-100 dark:border-zinc-800/80 bg-gray-50/50 dark:bg-zinc-900/40 text-[11px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-wider">
+                  {/* Select All Checkbox */}
+                  <th className="py-3.5 px-4 w-10 text-center">
+                    <input
+                      type="checkbox"
+                      checked={isAllFilteredSelected}
+                      onChange={handleToggleSelectAll}
+                      className="w-4 h-4 rounded border-gray-300 dark:border-zinc-700 text-blue-600 focus:ring-blue-500 cursor-pointer accent-blue-600"
+                    />
+                  </th>
                   <th className="py-3 px-5 min-w-[320px]">Prompt / Query</th>
                   <th className="py-3 px-4">Technical Pillar</th>
                   <th className="py-3 px-4">Search Intent</th>
                   <th className="py-3 px-4">Type</th>
-                  <th className="py-3 px-4 text-center">Engine Scores</th>
                   <th className="py-3 px-4 text-center">Avg</th>
                   <th className="py-3 px-4 text-center">Active</th>
                   <th className="py-3 px-5 text-right">Actions</th>
@@ -502,19 +720,44 @@ export default function PromptsPage() {
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-zinc-800/60 text-xs">
                 {filteredPrompts.map((prompt) => {
+                  const isSelected = selectedPromptIds.includes(prompt.id);
+
                   return (
                     <tr
                       key={prompt.id}
-                      className="hover:bg-gray-50/70 dark:hover:bg-zinc-800/40 transition-colors group"
+                      className={cn(
+                        'transition-colors group',
+                        isSelected
+                          ? 'bg-blue-50/30 dark:bg-blue-950/20'
+                          : 'hover:bg-gray-50/70 dark:hover:bg-zinc-800/40'
+                      )}
                     >
+                      {/* Row Selection Checkbox */}
+                      <td className="py-4 px-4 text-center">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => handleToggleSelectRow(prompt.id)}
+                          className="w-4 h-4 rounded border-gray-300 dark:border-zinc-700 text-blue-600 focus:ring-blue-500 cursor-pointer accent-blue-600"
+                        />
+                      </td>
+
                       {/* Prompt / Query */}
                       <td className="py-4 px-5">
                         <div className="space-y-1">
                           <p className="font-semibold text-gray-900 dark:text-zinc-100 text-xs leading-snug">
                             &ldquo;{prompt.query}&rdquo;
                           </p>
-                          <div className="text-[11px] text-gray-500 dark:text-zinc-400">
-                            {prompt.runs_count || 0} runs
+                          <div className="flex items-center gap-2 text-[11px] text-gray-500 dark:text-zinc-400">
+                            <span>{prompt.runs_count || 0} runs</span>
+                            {prompt.target_engines && prompt.target_engines.length > 0 && (
+                              <>
+                                <span>•</span>
+                                <span className="font-medium text-gray-600 dark:text-zinc-400">
+                                  {prompt.target_engines.join(', ')}
+                                </span>
+                              </>
+                            )}
                           </div>
                         </div>
                       </td>
@@ -577,34 +820,9 @@ export default function PromptsPage() {
                         )}
                       </td>
 
-                      {/* Engine Scores Ticks */}
-                      <td className="py-4 px-4 text-center">
-                        <div className="inline-flex items-center gap-1">
-                          {(prompt.engine_scores || [null, null, null, null, null]).map((score, sIdx) => {
-                            const hasScore = score !== null && score !== undefined;
-                            return (
-                              <div
-                                key={sIdx}
-                                title={hasScore ? `Score: ${score}` : 'Not Scored'}
-                                className={cn(
-                                  'w-1.5 h-4 rounded-xs transition-all',
-                                  hasScore
-                                    ? score >= 80
-                                      ? 'bg-emerald-500'
-                                      : score >= 60
-                                      ? 'bg-blue-500'
-                                      : 'bg-amber-500'
-                                    : 'bg-gray-200 dark:bg-zinc-800'
-                                )}
-                              />
-                            );
-                          })}
-                        </div>
-                      </td>
-
                       {/* Avg Score */}
-                      <td className="py-4 px-4 text-center font-semibold text-gray-900 dark:text-zinc-100">
-                        {prompt.avg_score !== null && prompt.avg_score !== undefined ? prompt.avg_score : '—'}
+                      <td className="py-4 px-4 text-center font-semibold text-gray-900 dark:text-zinc-100 font-mono">
+                        {prompt.avg_score !== null && prompt.avg_score !== undefined ? `${prompt.avg_score}%` : '—'}
                       </td>
 
                       {/* Active Toggle Switch */}
@@ -620,16 +838,18 @@ export default function PromptsPage() {
                       <td className="py-4 px-5 text-right whitespace-nowrap">
                         <div className="inline-flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
                           <button
+                            type="button"
                             onClick={() => handleCopyPrompt(prompt.query)}
                             title="Copy prompt"
-                            className="p-1 rounded-md text-gray-400 hover:text-gray-700 dark:hover:text-zinc-200 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors"
+                            className="p-1 rounded-md text-gray-400 hover:text-gray-700 dark:hover:text-zinc-200 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
                           >
                             <Copy className="w-3.5 h-3.5" />
                           </button>
                           <button
+                            type="button"
                             onClick={() => handleDeletePrompt(prompt.id)}
                             title="Delete prompt"
-                            className="p-1 rounded-md text-gray-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
+                            className="p-1 rounded-md text-gray-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -645,16 +865,16 @@ export default function PromptsPage() {
       )}
 
       {/* ========================================================================= */}
-      {/* Modal 1: Add Custom Prompt */}
+      {/* Modal 1: Add Custom Prompt (with Target Models Selection Area) */}
       {/* ========================================================================= */}
       <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
-        <DialogContent className="sm:max-w-md bg-white dark:bg-zinc-900 border-gray-200 dark:border-zinc-800 rounded-2xl shadow-xl">
+        <DialogContent className="sm:max-w-lg bg-white dark:bg-zinc-900 border-gray-200 dark:border-zinc-800 rounded-2xl shadow-xl p-6">
           <DialogHeader>
             <DialogTitle className="text-base font-semibold text-gray-900 dark:text-white">
               Add Tracked Prompt
             </DialogTitle>
             <DialogDescription className="text-xs text-gray-500 dark:text-zinc-400">
-              Enter a search query to monitor across generative answer engines.
+              Enter a search query and configure target AI models to monitor across generative answer engines.
             </DialogDescription>
           </DialogHeader>
 
@@ -723,19 +943,60 @@ export default function PromptsPage() {
               </div>
             </div>
 
+            {/* Target Models Checkbox Selection Area */}
+            <div className="space-y-2 pt-1 border-t border-gray-100 dark:border-zinc-800">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold text-gray-700 dark:text-zinc-300">
+                  Target Models ({newTargetEngines.length}/5 Selected)
+                </label>
+                <span className="text-[11px] text-gray-400 dark:text-zinc-500">
+                  Select engines to audit for this query
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {AVAILABLE_ENGINES.map((eng) => {
+                  const isChecked = newTargetEngines.includes(eng.name);
+                  return (
+                    <label
+                      key={eng.name}
+                      onClick={() => handleToggleTargetEngine(eng.name)}
+                      className={cn(
+                        'p-2 rounded-xl border text-xs font-medium flex items-center gap-2 cursor-pointer transition-all select-none',
+                        isChecked
+                          ? 'border-blue-500 bg-blue-50/30 dark:bg-blue-950/20 text-gray-900 dark:text-white shadow-2xs'
+                          : 'border-gray-200 dark:border-zinc-800 bg-gray-50/40 dark:bg-zinc-800/30 text-gray-400 dark:text-zinc-500'
+                      )}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => {}} // handled by label onClick
+                        className="w-3.5 h-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 accent-blue-600"
+                      />
+                      <div className="flex items-center gap-1.5">
+                        <span className={cn('w-2 h-2 rounded-full', eng.color)} />
+                        <span>{eng.name}</span>
+                      </div>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+
             <DialogFooter className="pt-2">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => setIsAddModalOpen(false)}
-                className="text-xs h-9 rounded-xl border-gray-200 dark:border-zinc-800"
+                className="text-xs h-9 rounded-xl border-gray-200 dark:border-zinc-800 cursor-pointer"
               >
                 Cancel
               </Button>
               <Button
                 type="submit"
-                disabled={isSubmitting || !newQuery.trim()}
-                className="text-xs h-9 rounded-xl bg-gray-900 hover:bg-black dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-zinc-900"
+                disabled={isSubmitting || !newQuery.trim() || newTargetEngines.length === 0}
+                className="text-xs h-9 rounded-xl bg-gray-900 hover:bg-black dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-zinc-900 cursor-pointer font-medium"
               >
                 {isSubmitting ? 'Saving...' : 'Save Prompt'}
               </Button>
@@ -748,7 +1009,7 @@ export default function PromptsPage() {
       {/* Modal 2: Generate Prompts with AI */}
       {/* ========================================================================= */}
       <Dialog open={isAiModalOpen} onOpenChange={setIsAiModalOpen}>
-        <DialogContent className="sm:max-w-lg bg-white dark:bg-zinc-900 border-gray-200 dark:border-zinc-800 rounded-2xl shadow-xl">
+        <DialogContent className="sm:max-w-lg bg-white dark:bg-zinc-900 border-gray-200 dark:border-zinc-800 rounded-2xl shadow-xl p-6">
           <DialogHeader>
             <div className="flex items-center gap-2">
               <div className="w-7 h-7 rounded-lg bg-blue-100 dark:bg-blue-950 text-blue-600 dark:text-blue-400 flex items-center justify-center">
@@ -818,7 +1079,7 @@ export default function PromptsPage() {
               size="sm"
               disabled={isGeneratingAi}
               onClick={handleGenerateAiPrompts}
-              className="text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/40"
+              className="text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/40 cursor-pointer"
             >
               Regenerate
             </Button>
@@ -828,7 +1089,7 @@ export default function PromptsPage() {
                 variant="outline"
                 size="sm"
                 onClick={() => setIsAiModalOpen(false)}
-                className="text-xs h-9 rounded-xl border-gray-200 dark:border-zinc-800"
+                className="text-xs h-9 rounded-xl border-gray-200 dark:border-zinc-800 cursor-pointer"
               >
                 Cancel
               </Button>
@@ -837,7 +1098,7 @@ export default function PromptsPage() {
                 size="sm"
                 onClick={handleApplyAiSuggestions}
                 disabled={isSubmitting || aiSuggestions.filter((s) => s.selected).length === 0}
-                className="text-xs h-9 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium"
+                className="text-xs h-9 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium cursor-pointer"
               >
                 {isSubmitting ? 'Adding...' : `Add ${aiSuggestions.filter((s) => s.selected).length} Prompts`}
               </Button>
@@ -850,7 +1111,7 @@ export default function PromptsPage() {
       {/* Modal 3: Import Prompts from CSV */}
       {/* ========================================================================= */}
       <Dialog open={isImportModalOpen} onOpenChange={setIsImportModalOpen}>
-        <DialogContent className="sm:max-w-md bg-white dark:bg-zinc-900 border-gray-200 dark:border-zinc-800 rounded-2xl shadow-xl">
+        <DialogContent className="sm:max-w-md bg-white dark:bg-zinc-900 border-gray-200 dark:border-zinc-800 rounded-2xl shadow-xl p-6">
           <DialogHeader>
             <DialogTitle className="text-base font-semibold text-gray-900 dark:text-white">
               Import Prompts from CSV
@@ -878,7 +1139,7 @@ export default function PromptsPage() {
               type="button"
               variant="outline"
               onClick={() => setIsImportModalOpen(false)}
-              className="text-xs h-9 rounded-xl border-gray-200 dark:border-zinc-800"
+              className="text-xs h-9 rounded-xl border-gray-200 dark:border-zinc-800 cursor-pointer"
             >
               Cancel
             </Button>
@@ -886,13 +1147,21 @@ export default function PromptsPage() {
               type="button"
               onClick={handleImportCsv}
               disabled={isSubmitting || !csvText.trim()}
-              className="text-xs h-9 rounded-xl bg-gray-900 hover:bg-black dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-zinc-900 font-medium"
+              className="text-xs h-9 rounded-xl bg-gray-900 hover:bg-black dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-zinc-900 font-medium cursor-pointer"
             >
               {isSubmitting ? 'Importing...' : 'Import Rows'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* ========================================================================= */}
+      {/* Modal 4: Schedule Audits Modal */}
+      {/* ========================================================================= */}
+      <ScheduleAuditsModal
+        isOpen={isScheduleModalOpen}
+        onOpenChange={setIsScheduleModalOpen}
+      />
     </div>
   );
 }

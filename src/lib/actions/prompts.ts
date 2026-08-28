@@ -11,6 +11,7 @@ export interface DbPrompt {
   pillar: 'GEO' | 'AEO' | 'AIO';
   intent: 'Informational' | 'Commercial' | 'Transactional' | 'Navigational';
   type: 'Branded' | 'Unbranded';
+  target_engines?: string[];
   is_active: boolean;
   created_at: string;
   runs_count?: number;
@@ -97,6 +98,7 @@ export async function getPrompts(brandId?: string): Promise<{ success: boolean; 
         pillar: (p.pillar as any) || 'GEO',
         intent: (p.intent as any) || 'Informational',
         type: (p.type as any) || 'Unbranded',
+        target_engines: p.target_engines || ['ChatGPT', 'Perplexity', 'Gemini', 'Claude', 'Copilot'],
         is_active: p.is_active,
         created_at: p.created_at,
         runs_count: promptRuns.length,
@@ -118,6 +120,7 @@ export async function createPrompt(payload: {
   pillar?: 'GEO' | 'AEO' | 'AIO';
   intent?: 'Informational' | 'Commercial' | 'Transactional' | 'Navigational';
   type?: 'Branded' | 'Unbranded';
+  target_engines?: string[];
 }): Promise<{ success: boolean; data?: DbPrompt; error?: string }> {
   try {
     const userId = await getCurrentUserId();
@@ -159,6 +162,7 @@ export async function createPrompt(payload: {
         pillar: payload.pillar || 'GEO',
         intent: payload.intent || 'Informational',
         type: payload.type || 'Unbranded',
+        target_engines: payload.target_engines || ['ChatGPT', 'Perplexity', 'Gemini', 'Claude', 'Copilot'],
         is_active: true,
       })
       .select()
@@ -217,6 +221,7 @@ export async function batchCreatePrompts(
     pillar?: 'GEO' | 'AEO' | 'AIO';
     intent?: 'Informational' | 'Commercial' | 'Transactional' | 'Navigational';
     type?: 'Branded' | 'Unbranded';
+    target_engines?: string[];
   }[]
 ): Promise<{ success: boolean; count: number; error?: string }> {
   try {
@@ -252,6 +257,7 @@ export async function batchCreatePrompts(
       pillar: p.pillar || 'GEO',
       intent: p.intent || 'Informational',
       type: p.type || 'Unbranded',
+      target_engines: p.target_engines || ['ChatGPT', 'Perplexity', 'Gemini', 'Claude', 'Copilot'],
       is_active: true,
     }));
 
@@ -267,3 +273,4 @@ export async function batchCreatePrompts(
     return { success: false, count: 0, error: err.message };
   }
 }
+
