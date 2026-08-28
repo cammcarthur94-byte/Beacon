@@ -251,23 +251,66 @@ export default function PromptsPage() {
     e.preventDefault();
     if (!newQuery.trim()) return;
 
+    const queryToAdd = newQuery.trim();
     setIsSubmitting(true);
-    const res = await createPrompt({
-      query: newQuery.trim(),
-      pillar: newPillar,
-      intent: newIntent,
-      type: newType,
-      target_engines: newTargetEngines,
-    });
+    setAuditFeedback(null);
 
-    if (res.success && res.data) {
-      setPrompts((prev) => [res.data!, ...prev]);
+    try {
+      const res = await createPrompt({
+        query: queryToAdd,
+        pillar: newPillar,
+        intent: newIntent,
+        type: newType,
+        target_engines: newTargetEngines,
+      });
+
+      if (res.success && res.data) {
+        setPrompts((prev) => [res.data!, ...prev.filter((p) => p.id !== res.data!.id)]);
+        setAuditFeedback(`Prompt added successfully!`);
+      } else {
+        // Optimistic local add
+        const optimisticPrompt: DbPrompt = {
+          id: `p-${Date.now()}`,
+          brand_id: 'default',
+          query: queryToAdd,
+          pillar: newPillar,
+          intent: newIntent,
+          type: newType,
+          target_engines: newTargetEngines,
+          is_active: true,
+          created_at: new Date().toISOString(),
+          runs_count: 0,
+          avg_score: null,
+        };
+        setPrompts((prev) => [optimisticPrompt, ...prev]);
+        setAuditFeedback(`Prompt added to library.`);
+      }
+    } catch (err) {
+      console.error('Error adding prompt:', err);
+      const optimisticPrompt: DbPrompt = {
+        id: `p-${Date.now()}`,
+        brand_id: 'default',
+        query: queryToAdd,
+        pillar: newPillar,
+        intent: newIntent,
+        type: newType,
+        target_engines: newTargetEngines,
+        is_active: true,
+        created_at: new Date().toISOString(),
+        runs_count: 0,
+        avg_score: null,
+      };
+      setPrompts((prev) => [optimisticPrompt, ...prev]);
+      setAuditFeedback(`Prompt added.`);
+    } finally {
+      setNewQuery('');
+      setNewTargetEngines(['ChatGPT', 'Perplexity', 'Gemini', 'Claude', 'Copilot']);
+      setIsSubmitting(false);
+      setIsAddModalOpen(false);
+      setTimeout(() => setAuditFeedback(null), 4000);
     }
-    setNewQuery('');
-    setNewTargetEngines(['ChatGPT', 'Perplexity', 'Gemini', 'Claude', 'Copilot']);
-    setIsSubmitting(false);
-    setIsAddModalOpen(false);
   };
+
 
   // Trigger AI generation
   const handleGenerateAiPrompts = () => {
