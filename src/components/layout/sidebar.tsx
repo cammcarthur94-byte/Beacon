@@ -17,7 +17,9 @@ import {
   ChevronDown,
   Building2,
   CheckCircle2,
-  ExternalLink,
+  HardDrive,
+  BarChart3,
+  Sliders,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getUserBrands, DbBrand } from '@/lib/actions/brands';
@@ -30,53 +32,45 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
-const SIDEBAR_ITEMS = [
+interface NavSection {
+  title?: string;
+  items: {
+    name: string;
+    href: string;
+    icon: React.ComponentType<{ className?: string }>;
+    badge?: string;
+  }[];
+}
+
+const NAV_SECTIONS: NavSection[] = [
   {
-    name: 'Dashboard',
-    href: '/dashboard',
-    icon: LayoutDashboard,
+    items: [
+      { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+    ],
   },
   {
-    name: 'Prompts',
-    href: '/prompts',
-    icon: FileSearch,
+    title: 'Research',
+    items: [
+      { name: 'Prompts', href: '/prompts', icon: FileSearch },
+      { name: 'Response History', href: '/responses', icon: History },
+      { name: 'Competitor Intel', href: '/brand-kit', icon: Users },
+      { name: 'Websites & Matrix', href: '/visibility-matrix', icon: Globe },
+    ],
   },
   {
-    name: 'Response History',
-    href: '/responses',
-    icon: History,
+    title: 'Analytics',
+    items: [
+      { name: 'AI Fix Queue', href: '/dashboard/actions', icon: Sparkles, badge: '3' },
+      { name: 'Alerts', href: '/dashboard/alerts', icon: Bell, badge: '2' },
+      { name: 'Analytics', href: '/dashboard/archive', icon: BarChart3 },
+    ],
   },
   {
-    name: 'Competitor Intel',
-    href: '/brand-kit',
-    icon: Users,
-  },
-  {
-    name: 'Alerts',
-    href: '/dashboard/alerts',
-    icon: Bell,
-    badge: '2',
-  },
-  {
-    name: 'Websites',
-    href: '/visibility-matrix',
-    icon: Globe,
-  },
-  {
-    name: 'AI Fix Queue',
-    href: '/dashboard/actions',
-    icon: Sparkles,
-    badge: '3',
-  },
-  {
-    name: 'Custom domains',
-    href: '/settings',
-    icon: Layers,
-  },
-  {
-    name: 'Settings',
-    href: '/settings',
-    icon: Settings,
+    title: 'Platform Settings',
+    items: [
+      { name: 'Custom Domains', href: '/settings', icon: Layers },
+      { name: 'Platform Settings', href: '/settings', icon: Sliders },
+    ],
   },
 ];
 
@@ -86,7 +80,7 @@ export function Sidebar() {
   const [selectedBrand, setSelectedBrand] = React.useState<DbBrand>({
     id: 'b-default',
     name: 'Acme Sync',
-    domain: 'acmesync.io',
+    domain: 'acmelabs.com',
     industry: 'Technology / SaaS',
     description: '',
     competitors: [],
@@ -103,10 +97,10 @@ export function Sidebar() {
   }, []);
 
   return (
-    <aside className="w-64 bg-gray-50/90 dark:bg-zinc-950 border-r border-gray-200/80 dark:border-zinc-800/80 flex flex-col justify-between h-screen sticky top-0 z-30 select-none shrink-0">
+    <aside className="w-64 bg-gray-50/90 dark:bg-zinc-950 border-r border-gray-200/80 dark:border-zinc-800/80 flex flex-col justify-between h-screen sticky top-0 z-30 select-none shrink-0 overflow-y-auto">
       <div className="flex flex-col">
         {/* Logo & Platform Header */}
-        <div className="h-16 flex items-center px-5 border-b border-gray-200/60 dark:border-zinc-800/60 gap-3">
+        <div className="h-16 flex items-center px-5 border-b border-gray-200/60 dark:border-zinc-800/60 gap-3 shrink-0">
           <div className="w-8 h-8 rounded-lg bg-gray-900 dark:bg-white flex items-center justify-center text-white dark:text-zinc-950 shadow-sm">
             <Radio className="w-4 h-4 animate-pulse" />
           </div>
@@ -124,16 +118,16 @@ export function Sidebar() {
         </div>
 
         {/* Brand Switcher */}
-        <div className="p-3">
+        <div className="p-3 pb-1 shrink-0">
           <DropdownMenu>
-            <DropdownMenuTrigger className="w-full flex items-center justify-between p-2 rounded-xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-gray-100/80 dark:hover:bg-zinc-800 transition-all text-left shadow-2xs group">
+            <DropdownMenuTrigger className="w-full flex items-center justify-between p-2 rounded-xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-gray-100/80 dark:hover:bg-zinc-800 transition-all text-left shadow-2xs group cursor-pointer">
               <div className="flex items-center gap-2.5 min-w-0">
                 <div className="w-6 h-6 rounded-md bg-blue-600/10 dark:bg-blue-400/10 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-xs shrink-0">
                   {selectedBrand.name.charAt(0)}
                 </div>
                 <div className="min-w-0 truncate">
                   <div className="text-xs font-medium text-gray-900 dark:text-zinc-100 truncate">{selectedBrand.name}</div>
-                  <div className="text-[10px] text-gray-500 dark:text-zinc-400 truncate">{selectedBrand.domain}</div>
+                  <div className="text-[10px] text-gray-500 dark:text-zinc-400 truncate">{selectedBrand.domain || 'acmelabs.com'}</div>
                 </div>
               </div>
               <ChevronDown className="w-3.5 h-3.5 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-zinc-300 transition-colors shrink-0 ml-1" />
@@ -176,59 +170,87 @@ export function Sidebar() {
           </DropdownMenu>
         </div>
 
-        {/* Navigation Items */}
-        <div className="px-3 py-1">
-          <nav className="space-y-1">
-            {SIDEBAR_ITEMS.map((item) => {
-              const Icon = item.icon;
-              const isActive =
-                pathname === item.href ||
-                (item.href === '/dashboard' && pathname === '/') ||
-                (item.href !== '/dashboard' && pathname.startsWith(item.href));
+        {/* Structured Navigation Sections */}
+        <div className="px-3 py-1 space-y-4">
+          {NAV_SECTIONS.map((section, sIdx) => (
+            <div key={section.title || `sec-${sIdx}`} className="space-y-1">
+              {section.title && (
+                <div className="px-3 text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-zinc-500 mb-1">
+                  {section.title}
+                </div>
+              )}
+              <nav className="space-y-0.5">
+                {section.items.map((item) => {
+                  const Icon = item.icon;
+                  const isActive =
+                    pathname === item.href ||
+                    (item.href === '/dashboard' && pathname === '/') ||
+                    (item.href !== '/dashboard' && pathname.startsWith(item.href));
 
-              return (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className={cn(
-                    'flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-all group',
-                    isActive
-                      ? 'bg-gray-200/80 dark:bg-zinc-800 text-gray-900 dark:text-zinc-100 font-semibold shadow-2xs'
-                      : 'text-gray-600 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-zinc-100 hover:bg-gray-100/70 dark:hover:bg-zinc-900'
-                  )}
-                >
-                  <div className="flex items-center gap-2.5">
-                    <Icon
+                  return (
+                    <Link
+                      key={item.name}
+                      href={item.href}
                       className={cn(
-                        'w-4 h-4 transition-colors',
+                        'flex items-center justify-between px-3 py-1.5 rounded-xl text-xs font-medium transition-all group',
                         isActive
-                          ? 'text-gray-900 dark:text-zinc-100'
-                          : 'text-gray-500 dark:text-zinc-400 group-hover:text-gray-900 dark:group-hover:text-zinc-200'
-                      )}
-                    />
-                    <span>{item.name}</span>
-                  </div>
-                  {item.badge && (
-                    <span
-                      className={cn(
-                        'text-[10px] px-1.5 py-0.5 rounded-full font-medium',
-                        isActive
-                          ? 'bg-gray-300/80 dark:bg-zinc-700 text-gray-900 dark:text-zinc-100'
-                          : 'bg-gray-200/60 dark:bg-zinc-800 text-gray-600 dark:text-zinc-400'
+                          ? 'bg-gray-200/80 dark:bg-zinc-800 text-gray-900 dark:text-zinc-100 font-semibold shadow-2xs'
+                          : 'text-gray-600 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-zinc-100 hover:bg-gray-100/70 dark:hover:bg-zinc-900'
                       )}
                     >
-                      {item.badge}
-                    </span>
-                  )}
-                </Link>
-              );
-            })}
-          </nav>
+                      <div className="flex items-center gap-2.5">
+                        <Icon
+                          className={cn(
+                            'w-4 h-4 transition-colors',
+                            isActive
+                              ? 'text-gray-900 dark:text-zinc-100'
+                              : 'text-gray-500 dark:text-zinc-400 group-hover:text-gray-900 dark:group-hover:text-zinc-200'
+                          )}
+                        />
+                        <span>{item.name}</span>
+                      </div>
+                      {item.badge && (
+                        <span
+                          className={cn(
+                            'text-[10px] px-1.5 py-0.5 rounded-full font-medium',
+                            isActive
+                              ? 'bg-gray-300/80 dark:bg-zinc-700 text-gray-900 dark:text-zinc-100'
+                              : 'bg-gray-200/60 dark:bg-zinc-800 text-gray-600 dark:text-zinc-400'
+                          )}
+                        >
+                          {item.badge}
+                        </span>
+                      )}
+                    </Link>
+                  );
+                })}
+              </nav>
+            </div>
+          ))}
         </div>
       </div>
 
-      {/* User Profile Footer */}
-      <div className="p-3 border-t border-gray-200/60 dark:border-zinc-800/60">
+      {/* Footer Area: Usage Meter & User Profile */}
+      <div className="p-3 border-t border-gray-200/60 dark:border-zinc-800/60 space-y-2.5 shrink-0">
+        {/* Usage Meter */}
+        <div className="p-2.5 rounded-xl bg-white dark:bg-zinc-900 border border-gray-200/80 dark:border-zinc-800 shadow-2xs space-y-1.5">
+          <div className="flex items-center justify-between text-[11px]">
+            <span className="font-semibold text-gray-700 dark:text-zinc-300 flex items-center gap-1">
+              <HardDrive className="w-3 h-3 text-blue-600 dark:text-blue-400" />
+              Usage Meter
+            </span>
+            <span className="font-mono text-[10px] text-gray-500 dark:text-zinc-400">74% / 10k</span>
+          </div>
+          <div className="w-full h-1.5 bg-gray-100 dark:bg-zinc-800 rounded-full overflow-hidden">
+            <div className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full w-[74%]" />
+          </div>
+          <div className="flex items-center justify-between text-[10px] text-gray-400 dark:text-zinc-500">
+            <span>7,420 queries</span>
+            <span className="text-blue-600 dark:text-blue-400 hover:underline cursor-pointer">Upgrade</span>
+          </div>
+        </div>
+
+        {/* User Profile Avatar */}
         <div className="flex items-center justify-between p-2 rounded-xl bg-white dark:bg-zinc-900 border border-gray-200/80 dark:border-zinc-800 shadow-2xs">
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="w-7 h-7 rounded-full bg-gray-900 dark:bg-zinc-100 text-white dark:text-zinc-900 flex items-center justify-center font-semibold text-xs shrink-0">
@@ -248,3 +270,4 @@ export function Sidebar() {
     </aside>
   );
 }
+
