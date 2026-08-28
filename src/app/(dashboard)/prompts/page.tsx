@@ -40,6 +40,8 @@ import {
   createPrompt,
   togglePromptActive,
   deletePrompt,
+  batchDeletePrompts,
+  updatePromptEngines,
   batchCreatePrompts,
   DbPrompt,
 } from '@/lib/actions/prompts';
@@ -189,22 +191,86 @@ export default function PromptsPage() {
     }
   };
 
-  // Delete prompt
+  // Delete single prompt
   const handleDeletePrompt = async (id: string) => {
     const updated = prompts.filter((p) => p.id !== id);
     setPrompts(updated);
-    saveToLocal(updated);
     setSelectedPromptIds((prev) => prev.filter((pId) => pId !== id));
+    setAuditFeedback('Prompt deleted.');
     try {
       await deletePrompt(id);
     } catch (err) {
       console.warn('Error deleting prompt in backend:', err);
+    } finally {
+      setTimeout(() => setAuditFeedback(null), 3000);
+    }
+  };
+
+  // Bulk Delete Selected Prompts
+  const [isDeletingSelected, setIsDeletingSelected] = React.useState(false);
+  const handleDeleteSelectedPrompts = async () => {
+    if (selectedPromptIds.length === 0) return;
+    const count = selectedPromptIds.length;
+    const idsToDelete = [...selectedPromptIds];
+
+    // Optimistic UI removal
+    const updated = prompts.filter((p) => !idsToDelete.includes(p.id));
+    setPrompts(updated);
+    setSelectedPromptIds([]);
+    setAuditFeedback(`Deleted ${count} selected prompt${count > 1 ? 's' : ''}`);
+
+    setIsDeletingSelected(true);
+    try {
+      await batchDeletePrompts(idsToDelete);
+    } catch (err) {
+      console.error('Error deleting selected prompts in backend:', err);
+    } finally {
+      setIsDeletingSelected(false);
+      setTimeout(() => setAuditFeedback(null), 3500);
+    }
+  };
+
+  // Toggle single engine for a prompt directly from the table
+  const handleToggleEngineForPrompt = async (promptId: string, engineName: string) => {
+    const prompt = prompts.find((p) => p.id === promptId);
+    if (!prompt) return;
+
+    const currentEngines = prompt.target_engines && prompt.target_engines.length > 0
+      ? prompt.target_engines
+      : ['ChatGPT', 'Perplexity', 'Gemini', 'Claude', 'Copilot'];
+
+    let updatedEngines: string[];
+    if (currentEngines.includes(engineName)) {
+      if (currentEngines.length === 1) {
+        setAuditFeedback('At least 1 AI model must remain selected.');
+        setTimeout(() => setAuditFeedback(null), 3000);
+        return;
+      }
+      updatedEngines = currentEngines.filter((e) => e !== engineName);
+    } else {
+      updatedEngines = [...currentEngines, engineName];
+    }
+
+    const updated = prompts.map((p) =>
+      p.id === promptId ? { ...p, target_engines: updatedEngines } : p
+    );
+    setPrompts(updated);
+    setAuditFeedback(`Updated active models for prompt.`);
+
+    try {
+      await updatePromptEngines(promptId, updatedEngines);
+    } catch (err) {
+      console.error('Error updating prompt target engines:', err);
+    } finally {
+      setTimeout(() => setAuditFeedback(null), 3000);
     }
   };
 
   // Copy prompt to clipboard
   const handleCopyPrompt = (query: string) => {
     navigator.clipboard.writeText(query);
+    setAuditFeedback('Prompt copied to clipboard!');
+    setTimeout(() => setAuditFeedback(null), 2500);
   };
 
   // Run Selected Prompts Audit
@@ -701,6 +767,23 @@ export default function PromptsPage() {
               <span>Run Selected {selectedPromptIds.length > 0 ? `(${selectedPromptIds.length})` : ''}</span>
             </Button>
 
+            {/* Delete Selected Button */}
+            {selectedPromptIds.length > 0 && (
+              <Button
+                variant="outline"
+                onClick={handleDeleteSelectedPrompts}
+                disabled={isDeletingSelected}
+                className="h-8.5 px-3.5 rounded-xl border-red-200 dark:border-red-900/60 bg-red-50/70 dark:bg-red-950/40 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/60 font-medium text-xs flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer"
+              >
+                {isDeletingSelected ? (
+                  <RotateCw className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Trash2 className="w-3.5 h-3.5" />
+                )}
+                <span>Delete Selected ({selectedPromptIds.length})</span>
+              </Button>
+            )}
+
             {/* Run All Button */}
             <Button
               variant="outline"
@@ -856,20 +939,40 @@ export default function PromptsPage() {
 
                       {/* Prompt / Query */}
                       <td className="py-4 px-5">
-                        <div className="space-y-1">
+                        <div className="space-y-1.5">
                           <p className="font-semibold text-gray-900 dark:text-zinc-100 text-xs leading-snug">
                             &ldquo;{prompt.query}&rdquo;
                           </p>
-                          <div className="flex items-center gap-2 text-[11px] text-gray-500 dark:text-zinc-400">
-                            <span>{prompt.runs_count || 0} runs</span>
-                            {prompt.target_engines && prompt.target_engines.length > 0 && (
-                              <>
-                                <span>•</span>
-                                <span className="font-medium text-gray-600 dark:text-zinc-400">
-                                  {prompt.target_engines.join(', ')}
-                                </span>
-                              </>
-                            )}
+                          {/* Interactive Target AI Model Badges / Toggles */}
+                          <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                            <span className="text-[10px] text-gray-400 dark:text-zinc-500 font-medium">Models:</span>
+                            {AVAILABLE_ENGINES.map((eng) => {
+                              const promptEngines = prompt.target_engines && prompt.target_engines.length > 0
+                                ? prompt.target_engines
+                                : ['ChatGPT', 'Perplexity', 'Gemini', 'Claude', 'Copilot'];
+                              const isChecked = promptEngines.includes(eng.name);
+
+                              return (
+                                <button
+                                  key={eng.name}
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleToggleEngineForPrompt(prompt.id, eng.name);
+                                  }}
+                                  title={isChecked ? `${eng.name} active (Click to exclude)` : `${eng.name} excluded (Click to include)`}
+                                  className={cn(
+                                    'inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-medium border transition-all cursor-pointer select-none',
+                                    isChecked
+                                      ? 'bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border-blue-200/80 dark:border-blue-800/60 shadow-2xs hover:border-blue-400'
+                                      : 'bg-gray-100/50 dark:bg-zinc-800/30 text-gray-400 dark:text-zinc-600 border-gray-200/60 dark:border-zinc-800 line-through opacity-50 hover:opacity-90 hover:border-gray-300'
+                                  )}
+                                >
+                                  <span className={cn('w-1.5 h-1.5 rounded-full', isChecked ? eng.color : 'bg-gray-300 dark:bg-zinc-600')} />
+                                  <span>{eng.name}</span>
+                                </button>
+                              );
+                            })}
                           </div>
                         </div>
                       </td>

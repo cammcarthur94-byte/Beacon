@@ -455,12 +455,70 @@ export async function batchCreatePrompts(
     }
 
     revalidatePath('/prompts');
+    revalidatePath('/dashboard/prompts');
     revalidatePath('/dashboard');
+    revalidatePath('/brand-kit');
+    revalidatePath('/', 'layout');
     return { success: true, count: res1.data?.length || 0 };
   } catch (err: any) {
     console.error('batchCreatePrompts error:', err);
     return { success: false, count: 0, error: err.message };
   }
 }
+
+/**
+ * Bulk delete prompts by array of IDs.
+ */
+export async function batchDeletePrompts(promptIds: string[]): Promise<{ success: boolean; count: number; error?: string }> {
+  try {
+    if (!promptIds || promptIds.length === 0) {
+      return { success: true, count: 0 };
+    }
+
+    const admin = getSupabaseAdmin();
+    const { error } = await admin.from('prompts').delete().in('id', promptIds);
+
+    if (error) throw error;
+
+    revalidatePath('/prompts');
+    revalidatePath('/dashboard/prompts');
+    revalidatePath('/dashboard');
+    revalidatePath('/brand-kit');
+    revalidatePath('/', 'layout');
+    return { success: true, count: promptIds.length };
+  } catch (err: any) {
+    console.error('batchDeletePrompts error:', err);
+    return { success: false, count: 0, error: err.message };
+  }
+}
+
+/**
+ * Update target engines for a specific prompt.
+ */
+export async function updatePromptEngines(
+  promptId: string,
+  targetEngines: string[]
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const admin = getSupabaseAdmin();
+    const { error } = await admin
+      .from('prompts')
+      .update({ target_engines: targetEngines })
+      .eq('id', promptId);
+
+    if (error) throw error;
+
+    revalidatePath('/prompts');
+    revalidatePath('/dashboard/prompts');
+    revalidatePath('/dashboard');
+    revalidatePath('/brand-kit');
+    revalidatePath('/', 'layout');
+    return { success: true };
+  } catch (err: any) {
+    console.error('updatePromptEngines error:', err);
+    return { success: false, error: err.message };
+  }
+}
+
 
 
