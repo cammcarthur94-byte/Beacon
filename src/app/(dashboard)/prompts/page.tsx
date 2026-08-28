@@ -133,19 +133,9 @@ export default function PromptsPage() {
 
     try {
       const res = await getPrompts();
-      if (res.success && res.data && res.data.length > 0) {
-        // Merge server prompts with locally added items
-        const serverMap = new Map(res.data.map((p) => [p.query.toLowerCase().trim(), p]));
-        const merged = [...res.data];
-
-        cached.forEach((localPrompt) => {
-          if (!serverMap.has(localPrompt.query.toLowerCase().trim())) {
-            merged.unshift(localPrompt);
-          }
-        });
-
-        setPrompts(merged);
-        saveToLocal(merged);
+      if (res.success && res.data) {
+        setPrompts(res.data);
+        saveToLocal(res.data);
       } else if (cached.length > 0) {
         setPrompts(cached);
       }

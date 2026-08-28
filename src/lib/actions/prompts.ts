@@ -310,7 +310,10 @@ export async function createPrompt(payload: {
         };
 
         revalidatePath('/prompts');
+        revalidatePath('/dashboard/prompts');
         revalidatePath('/dashboard');
+        revalidatePath('/brand-kit');
+        revalidatePath('/', 'layout');
         return { success: true, data: formattedPrompt };
       }
 
@@ -332,7 +335,10 @@ export async function createPrompt(payload: {
     };
 
     revalidatePath('/prompts');
+    revalidatePath('/dashboard/prompts');
     revalidatePath('/dashboard');
+    revalidatePath('/brand-kit');
+    revalidatePath('/', 'layout');
     return { success: true, data: formattedPrompt };
   } catch (err: any) {
     console.error('createPrompt exception:', err);
@@ -355,7 +361,10 @@ export async function togglePromptActive(
     if (error) throw error;
 
     revalidatePath('/prompts');
+    revalidatePath('/dashboard/prompts');
     revalidatePath('/dashboard');
+    revalidatePath('/brand-kit');
+    revalidatePath('/', 'layout');
     return { success: true };
   } catch (err: any) {
     return { success: false, error: err.message };
@@ -370,7 +379,10 @@ export async function deletePrompt(promptId: string): Promise<{ success: boolean
     if (error) throw error;
 
     revalidatePath('/prompts');
+    revalidatePath('/dashboard/prompts');
     revalidatePath('/dashboard');
+    revalidatePath('/brand-kit');
+    revalidatePath('/', 'layout');
     return { success: true };
   } catch (err: any) {
     return { success: false, error: err.message };

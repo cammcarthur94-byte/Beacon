@@ -27,6 +27,18 @@ export async function getCurrentUserId(): Promise<string> {
   try {
     const admin = getSupabaseAdmin();
 
+    // 0. Check if an existing brand already has a linked user_id in database
+    const { data: existingBrand } = await admin
+      .from('brands')
+      .select('user_id')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (existingBrand?.user_id) {
+      return existingBrand.user_id;
+    }
+
     // 1. Check if an existing profile exists in profiles table
     const { data: existingProfile } = await admin
       .from('profiles')
