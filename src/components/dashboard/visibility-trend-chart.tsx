@@ -5,8 +5,6 @@ import {
   ResponsiveContainer,
   AreaChart,
   Area,
-  LineChart,
-  Line,
   XAxis,
   YAxis,
   Tooltip,
@@ -14,7 +12,7 @@ import {
 } from 'recharts';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { Sparkles, Eye, PieChart as PieIcon, MessageSquare, Heart } from 'lucide-react';
+import { Eye, PieChart as PieIcon, MessageSquare, Heart, TrendingUp } from 'lucide-react';
 
 export interface KpiTimeSeriesPoint {
   date: string;
@@ -25,81 +23,86 @@ export interface KpiTimeSeriesPoint {
   sentiment: number;       // 0 - 100 (% positive)
 }
 
-interface VisibilityTrendChartProps {
-  data?: KpiTimeSeriesPoint[];
-  dateRange?: string;
-}
-
-type MetricKey = 'visibility' | 'shareOfVoice' | 'mentions' | 'sentiment';
+export type MetricKey = 'visibility' | 'shareOfVoice' | 'mentions' | 'sentiment';
 
 interface MetricConfig {
   key: MetricKey;
   name: string;
+  shortName: string;
   color: string;
-  strokeColor: string;
   gradientId: string;
   icon: React.ComponentType<{ className?: string }>;
   activeBg: string;
   activeBorder: string;
   activeText: string;
-  dotColor: string;
   unit: string;
+  yDomain: [number, number];
+  growthText: string;
+  description: string;
 }
 
-const METRICS: MetricConfig[] = [
-  {
+const METRIC_CONFIGS: Record<MetricKey, MetricConfig> = {
+  visibility: {
     key: 'visibility',
-    name: 'AI Visibility',
+    name: 'AI Visibility Score Trend',
+    shortName: 'AI Visibility',
     color: '#10b981',
-    strokeColor: '#10b981',
-    gradientId: 'visibilityGrad',
+    gradientId: 'visSingleGrad',
     icon: Eye,
     activeBg: 'bg-emerald-50 dark:bg-emerald-950/60',
     activeBorder: 'border-emerald-300 dark:border-emerald-700',
     activeText: 'text-emerald-700 dark:text-emerald-300',
-    dotColor: '#10b981',
     unit: '/100',
+    yDomain: [0, 100],
+    growthText: '+14.7% Growth',
+    description: 'Aggregated generative AI visibility index across tracked engines',
   },
-  {
+  shareOfVoice: {
     key: 'shareOfVoice',
-    name: 'Share of Voice',
+    name: 'AI Share of Voice Trend',
+    shortName: 'Share of Voice',
     color: '#3b82f6',
-    strokeColor: '#3b82f6',
-    gradientId: 'sovGrad',
+    gradientId: 'sovSingleGrad',
     icon: PieIcon,
     activeBg: 'bg-blue-50 dark:bg-blue-950/60',
     activeBorder: 'border-blue-300 dark:border-blue-700',
     activeText: 'text-blue-700 dark:text-blue-300',
-    dotColor: '#3b82f6',
     unit: '%',
+    yDomain: [0, 100],
+    growthText: '+3.2% vs Competitors',
+    description: 'Percentage of generative search brand citations vs. competitors',
   },
-  {
+  mentions: {
     key: 'mentions',
-    name: 'AI Mentions',
+    name: 'AI Prompt Citations & Mentions',
+    shortName: 'AI Mentions',
     color: '#8b5cf6',
-    strokeColor: '#8b5cf6',
-    gradientId: 'mentionsGrad',
+    gradientId: 'mentionsSingleGrad',
     icon: MessageSquare,
     activeBg: 'bg-purple-50 dark:bg-purple-950/60',
     activeBorder: 'border-purple-300 dark:border-purple-700',
     activeText: 'text-purple-700 dark:text-purple-300',
-    dotColor: '#8b5cf6',
     unit: '%',
+    yDomain: [0, 100],
+    growthText: '+8.5% Citations',
+    description: 'Prompt coverage and mention volume across simulated search clusters',
   },
-  {
+  sentiment: {
     key: 'sentiment',
-    name: 'Sentiment',
+    name: 'Brand Sentiment Positive Ratio',
+    shortName: 'Sentiment',
     color: '#f59e0b',
-    strokeColor: '#f59e0b',
-    gradientId: 'sentimentGrad',
+    gradientId: 'sentimentSingleGrad',
     icon: Heart,
     activeBg: 'bg-amber-50 dark:bg-amber-950/60',
     activeBorder: 'border-amber-300 dark:border-amber-700',
     activeText: 'text-amber-700 dark:text-amber-300',
-    dotColor: '#f59e0b',
     unit: '%',
+    yDomain: [50, 100],
+    growthText: '92% Positive Context',
+    description: 'Contextual tone and perception evaluation in generative answers',
   },
-];
+};
 
 const DEFAULT_SAMPLE_DATA: KpiTimeSeriesPoint[] = [
   { date: 'Aug 01', visibility: 68, shareOfVoice: 34, mentions: 64, mentionsRaw: '36/56', sentiment: 84 },
@@ -112,65 +115,51 @@ const DEFAULT_SAMPLE_DATA: KpiTimeSeriesPoint[] = [
   { date: 'Aug 27', visibility: 78, shareOfVoice: 42, mentions: 79, mentionsRaw: '44/56', sentiment: 92 },
 ];
 
+interface VisibilityTrendChartProps {
+  data?: KpiTimeSeriesPoint[];
+  dateRange?: string;
+  selectedMetric?: MetricKey;
+  onSelectMetric?: (key: MetricKey) => void;
+}
+
 export function VisibilityTrendChart({
   data = DEFAULT_SAMPLE_DATA,
   dateRange = 'Last 30 Days',
+  selectedMetric = 'visibility',
+  onSelectMetric,
 }: VisibilityTrendChartProps) {
-  // All 4 metrics active by default
-  const [activeMetrics, setActiveMetrics] = React.useState<MetricKey[]>([
-    'visibility',
-    'shareOfVoice',
-    'mentions',
-    'sentiment',
-  ]);
-
-  const toggleMetric = (key: MetricKey) => {
-    setActiveMetrics((prev) => {
-      if (prev.includes(key)) {
-        if (prev.length === 1) return prev; // keep at least 1 metric active
-        return prev.filter((k) => k !== key);
-      } else {
-        return [...prev, key];
-      }
-    });
-  };
-
+  const currentMetric = METRIC_CONFIGS[selectedMetric] || METRIC_CONFIGS.visibility;
   const chartData = data && data.length > 0 ? data : DEFAULT_SAMPLE_DATA;
 
-  // Custom hover tooltip
+  // Custom hover tooltip for the single selected metric
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       const row = payload[0].payload as KpiTimeSeriesPoint;
+      const rawVal = row[selectedMetric];
+      let displayFormatted = `${rawVal}${currentMetric.unit}`;
+      if (selectedMetric === 'mentions' && row.mentionsRaw) {
+        displayFormatted = `${row.mentionsRaw} (${rawVal}%)`;
+      } else if (selectedMetric === 'visibility') {
+        displayFormatted = `${rawVal}/100`;
+      }
+
       return (
-        <div className="rounded-xl border border-gray-200/80 dark:border-zinc-800 bg-white/95 dark:bg-zinc-900/95 p-3.5 shadow-xl backdrop-blur-md text-xs space-y-2 min-w-[210px]">
+        <div className="rounded-xl border border-gray-200/80 dark:border-zinc-800 bg-white/95 dark:bg-zinc-900/95 p-3.5 shadow-xl backdrop-blur-md text-xs space-y-1.5 min-w-[200px]">
           <div className="font-semibold text-gray-900 dark:text-zinc-100 border-b border-gray-100 dark:border-zinc-800 pb-1.5 flex items-center justify-between">
             <span>{label}, 2026</span>
             <span className="text-[10px] font-mono font-medium px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400">
-              Audit Snapshot
+              Audit Data
             </span>
           </div>
 
-          <div className="space-y-1.5 pt-0.5">
-            {METRICS.filter((m) => activeMetrics.includes(m.key)).map((m) => {
-              let displayVal = `${row[m.key]}${m.unit}`;
-              if (m.key === 'mentions' && row.mentionsRaw) {
-                displayVal = `${row.mentionsRaw} (${row.mentions}%)`;
-              } else if (m.key === 'visibility') {
-                displayVal = `${row.visibility}/100`;
-              }
-
-              return (
-                <div key={m.key} className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: m.color }} />
-                    <span className="text-gray-600 dark:text-zinc-400">{m.name}:</span>
-                  </div>
-                  <span className="font-bold text-gray-900 dark:text-zinc-100 font-mono">
-                    {displayVal}
-                  </span>
-                </div>
-              );
-            })}
+          <div className="flex items-center justify-between pt-1">
+            <div className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: currentMetric.color }} />
+              <span className="font-medium text-gray-600 dark:text-zinc-300">{currentMetric.shortName}:</span>
+            </div>
+            <span className="font-bold text-gray-900 dark:text-zinc-100 font-mono text-sm">
+              {displayFormatted}
+            </span>
           </div>
         </div>
       );
@@ -185,42 +174,48 @@ export function VisibilityTrendChart({
           <div>
             <div className="flex items-center gap-2">
               <CardTitle className="text-base font-bold text-gray-900 dark:text-white">
-                AI Visibility Over Time
+                {currentMetric.name}
               </CardTitle>
-              <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/60">
-                +14.7% Growth
+              <span className={cn(
+                'text-[10px] font-medium px-2 py-0.5 rounded-full border',
+                currentMetric.activeBg,
+                currentMetric.activeBorder,
+                currentMetric.activeText
+              )}>
+                {currentMetric.growthText}
               </span>
             </div>
             <CardDescription className="text-xs text-gray-500 dark:text-zinc-400 mt-0.5">
-              Historical multi-metric tracking across historical audits ({dateRange})
+              {currentMetric.description} ({dateRange})
             </CardDescription>
           </div>
 
-          {/* Line Selection Legend Controls */}
+          {/* Metric Selector Pills */}
           <div className="flex items-center gap-1.5 flex-wrap">
-            {METRICS.map((metric) => {
-              const isActive = activeMetrics.includes(metric.key);
+            {(Object.keys(METRIC_CONFIGS) as MetricKey[]).map((key) => {
+              const m = METRIC_CONFIGS[key];
+              const isSelected = selectedMetric === key;
               return (
                 <button
-                  key={metric.key}
+                  key={m.key}
                   type="button"
-                  onClick={() => toggleMetric(metric.key)}
+                  onClick={() => onSelectMetric?.(m.key)}
                   className={cn(
                     'px-2.5 py-1 rounded-full text-xs font-medium border transition-all duration-200 flex items-center gap-1.5 cursor-pointer select-none shadow-2xs',
-                    isActive
-                      ? cn(metric.activeBg, metric.activeBorder, metric.activeText)
+                    isSelected
+                      ? cn(m.activeBg, m.activeBorder, m.activeText, 'font-semibold')
                       : 'bg-white dark:bg-zinc-900 border-gray-200 dark:border-zinc-800 text-gray-400 dark:text-zinc-500 opacity-60 hover:opacity-100'
                   )}
                 >
                   <span
                     className={cn(
                       'w-1.5 h-1.5 rounded-full inline-block transition-transform',
-                      isActive ? 'scale-110' : 'bg-gray-400 dark:bg-zinc-600'
+                      isSelected ? 'scale-125' : 'bg-gray-400 dark:bg-zinc-600'
                     )}
-                    style={{ backgroundColor: isActive ? metric.color : undefined }}
+                    style={{ backgroundColor: isSelected ? m.color : undefined }}
                   />
-                  <span>{metric.name}</span>
-                  {isActive && <span className="text-[10px] font-mono pl-0.5">✓</span>}
+                  <span>{m.shortName}</span>
+                  {isSelected && <span className="text-[10px] font-mono pl-0.5">✓</span>}
                 </button>
               );
             })}
@@ -233,21 +228,9 @@ export function VisibilityTrendChart({
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={chartData} margin={{ top: 10, right: 15, left: -20, bottom: 0 }}>
               <defs>
-                <linearGradient id="visibilityGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.12} />
-                  <stop offset="95%" stopColor="#10b981" stopOpacity={0.0} />
-                </linearGradient>
-                <linearGradient id="sovGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.12} />
-                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.0} />
-                </linearGradient>
-                <linearGradient id="mentionsGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.10} />
-                  <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.0} />
-                </linearGradient>
-                <linearGradient id="sentimentGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.10} />
-                  <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.0} />
+                <linearGradient id={currentMetric.gradientId} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor={currentMetric.color} stopOpacity={0.28} />
+                  <stop offset="95%" stopColor={currentMetric.color} stopOpacity={0.0} />
                 </linearGradient>
               </defs>
 
@@ -265,66 +248,21 @@ export function VisibilityTrendChart({
                 fontSize={11}
                 tickLine={false}
                 axisLine={false}
-                domain={[0, 100]}
-                tickFormatter={(val) => `${val}%`}
+                domain={currentMetric.yDomain}
+                tickFormatter={(val) => (currentMetric.unit === '/100' ? `${val}` : `${val}%`)}
               />
               <Tooltip content={<CustomTooltip />} />
 
-              {/* Metric 1: Visibility */}
-              {activeMetrics.includes('visibility') && (
-                <Area
-                  type="monotone"
-                  dataKey="visibility"
-                  name="AI Visibility"
-                  stroke="#10b981"
-                  strokeWidth={2.5}
-                  fillOpacity={1}
-                  fill="url(#visibilityGrad)"
-                  activeDot={{ r: 5, fill: '#10b981', stroke: '#ffffff', strokeWidth: 2 }}
-                />
-              )}
-
-              {/* Metric 2: Share of Voice */}
-              {activeMetrics.includes('shareOfVoice') && (
-                <Area
-                  type="monotone"
-                  dataKey="shareOfVoice"
-                  name="Share of Voice"
-                  stroke="#3b82f6"
-                  strokeWidth={2.5}
-                  fillOpacity={1}
-                  fill="url(#sovGrad)"
-                  activeDot={{ r: 5, fill: '#3b82f6', stroke: '#ffffff', strokeWidth: 2 }}
-                />
-              )}
-
-              {/* Metric 3: Mentions */}
-              {activeMetrics.includes('mentions') && (
-                <Area
-                  type="monotone"
-                  dataKey="mentions"
-                  name="AI Mentions"
-                  stroke="#8b5cf6"
-                  strokeWidth={2.5}
-                  fillOpacity={1}
-                  fill="url(#mentionsGrad)"
-                  activeDot={{ r: 5, fill: '#8b5cf6', stroke: '#ffffff', strokeWidth: 2 }}
-                />
-              )}
-
-              {/* Metric 4: Sentiment */}
-              {activeMetrics.includes('sentiment') && (
-                <Area
-                  type="monotone"
-                  dataKey="sentiment"
-                  name="Sentiment"
-                  stroke="#f59e0b"
-                  strokeWidth={2.5}
-                  fillOpacity={1}
-                  fill="url(#sentimentGrad)"
-                  activeDot={{ r: 5, fill: '#f59e0b', stroke: '#ffffff', strokeWidth: 2 }}
-                />
-              )}
+              <Area
+                type="monotone"
+                dataKey={selectedMetric}
+                name={currentMetric.shortName}
+                stroke={currentMetric.color}
+                strokeWidth={2.5}
+                fillOpacity={1}
+                fill={`url(#${currentMetric.gradientId})`}
+                activeDot={{ r: 6, fill: currentMetric.color, stroke: '#ffffff', strokeWidth: 2 }}
+              />
             </AreaChart>
           </ResponsiveContainer>
         </div>
@@ -332,5 +270,6 @@ export function VisibilityTrendChart({
     </Card>
   );
 }
+
 
 

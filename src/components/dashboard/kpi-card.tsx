@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { TrendingUp, TrendingDown, LucideIcon } from 'lucide-react';
+import { TrendingUp, TrendingDown, LucideIcon, CheckCircle2 } from 'lucide-react';
 
 interface KpiCardProps {
   title: string;
@@ -16,6 +16,8 @@ interface KpiCardProps {
   iconColor?: string;
   accentGlow?: string;
   subtext?: string;
+  isSelected?: boolean;
+  onClick?: () => void;
   breakdown?: {
     positive: number;
     neutral: number;
@@ -36,6 +38,8 @@ export function KpiCard({
   iconColor = 'text-blue-600 dark:text-blue-400',
   accentGlow = 'from-blue-500/10 to-transparent',
   subtext,
+  isSelected = false,
+  onClick,
   breakdown,
 }: KpiCardProps) {
   const getTrendStyle = () => {
@@ -68,13 +72,40 @@ export function KpiCard({
     }
   };
 
+  const getSelectedBorder = () => {
+    switch (trendColor) {
+      case 'blue':
+        return 'ring-2 ring-blue-500 border-blue-500 bg-blue-50/20 dark:bg-blue-950/20 shadow-md shadow-blue-500/10';
+      case 'purple':
+        return 'ring-2 ring-purple-500 border-purple-500 bg-purple-50/20 dark:bg-purple-950/20 shadow-md shadow-purple-500/10';
+      case 'amber':
+        return 'ring-2 ring-amber-500 border-amber-500 bg-amber-50/20 dark:bg-amber-950/20 shadow-md shadow-amber-500/10';
+      case 'emerald':
+      default:
+        return 'ring-2 ring-emerald-500 border-emerald-500 bg-emerald-50/20 dark:bg-emerald-950/20 shadow-md shadow-emerald-500/10';
+    }
+  };
+
   return (
-    <Card className="relative overflow-hidden border-gray-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-2xs hover:border-gray-300 dark:hover:border-zinc-700 transition-all duration-300 group flex flex-col justify-between">
+    <Card
+      onClick={onClick}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      className={cn(
+        'relative overflow-hidden transition-all duration-200 group flex flex-col justify-between select-none cursor-pointer',
+        isSelected
+          ? getSelectedBorder()
+          : 'border-gray-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-2xs hover:border-gray-300 dark:hover:border-zinc-700 hover:shadow-xs'
+      )}
+    >
       <div className={cn('absolute -top-12 -right-12 w-28 h-28 bg-gradient-to-br rounded-full blur-2xl pointer-events-none opacity-40 group-hover:opacity-75 transition-opacity', accentGlow)} />
       <CardContent className="p-5 flex flex-col justify-between h-full space-y-3">
         <div>
           <div className="flex items-center justify-between gap-2">
-            <span className="text-[11px] font-bold text-gray-500 dark:text-zinc-400 uppercase tracking-wider truncate">
+            <span className={cn(
+              'text-[11px] font-bold uppercase tracking-wider truncate transition-colors',
+              isSelected ? 'text-gray-900 dark:text-white' : 'text-gray-500 dark:text-zinc-400'
+            )}>
               {title}
             </span>
             {badgeText ? (
@@ -89,7 +120,7 @@ export function KpiCard({
           </div>
 
           <div className="mt-2 flex items-baseline gap-2.5 flex-wrap">
-            <div className="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
+            <div className="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900 dark:text-white font-mono">
               {value}
             </div>
             {change && (
@@ -109,7 +140,7 @@ export function KpiCard({
         {/* Optional Sentiment progress breakdown bar */}
         {breakdown ? (
           <div className="space-y-1.5 pt-1">
-            <div className="w-full h-2 rounded-full bg-gray-100 dark:bg-zinc-800 flex overflow-hidden">
+            <div className="w-full h-1.5 rounded-full bg-gray-100 dark:bg-zinc-800 flex overflow-hidden">
               <div className="bg-emerald-500 h-full transition-all" style={{ width: `${breakdown.positive}%` }} title={`Positive: ${breakdown.positive}%`} />
               <div className="bg-amber-400 h-full transition-all" style={{ width: `${breakdown.neutral}%` }} title={`Neutral: ${breakdown.neutral}%`} />
               <div className="bg-rose-500 h-full transition-all" style={{ width: `${breakdown.negative}%` }} title={`Negative: ${breakdown.negative}%`} />
@@ -123,11 +154,12 @@ export function KpiCard({
         ) : (
           <div className="text-[11px] text-gray-500 dark:text-zinc-400 flex items-center justify-between pt-1">
             <span>{period}</span>
-            {subtext && <span className="font-medium text-gray-900 dark:text-zinc-200">{subtext}</span>}
+            {subtext && <span className="font-medium text-gray-700 dark:text-zinc-300">{subtext}</span>}
           </div>
         )}
       </CardContent>
     </Card>
   );
 }
+
 

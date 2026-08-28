@@ -12,7 +12,8 @@ import {
   CartesianGrid,
 } from 'recharts';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { BarChart3, Sparkles } from 'lucide-react';
+import { BarChart3, Filter } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export interface PlatformScore {
   name: string;
@@ -24,18 +25,23 @@ export interface PlatformScore {
 
 interface PlatformVisibilityBarChartProps {
   data?: PlatformScore[];
+  activeEngines?: string[];
+  onToggleEngine?: (engineName: any) => void;
 }
+
 
 const DEFAULT_PLATFORMS: PlatformScore[] = [
   { name: 'ChatGPT', score: 86, color: '#10a37f', mentionRate: 78 },
   { name: 'Perplexity', score: 92, color: '#06b6d4', mentionRate: 88 },
   { name: 'Gemini', score: 74, color: '#3b82f6', mentionRate: 68 },
   { name: 'Claude', score: 81, color: '#f59e0b', mentionRate: 74 },
-  { name: 'Google AI', score: 68, color: '#8b5cf6', mentionRate: 62 },
+  { name: 'Copilot', score: 68, color: '#8b5cf6', mentionRate: 62 },
 ];
 
 export function PlatformVisibilityBarChart({
   data = DEFAULT_PLATFORMS,
+  activeEngines,
+  onToggleEngine,
 }: PlatformVisibilityBarChartProps) {
   // Sort platforms from highest to lowest score
   const chartData = React.useMemo(() => {
@@ -43,6 +49,7 @@ export function PlatformVisibilityBarChart({
     return [...raw].sort((a, b) => b.score - a.score);
   }, [data]);
 
+  const activeCount = activeEngines ? activeEngines.length : chartData.length;
   const topPlatform = chartData[0] || { name: 'Perplexity', score: 92 };
   const avgScore = chartData.length > 0
     ? (chartData.reduce((acc, curr) => acc + curr.score, 0) / chartData.length).toFixed(1)
@@ -51,11 +58,12 @@ export function PlatformVisibilityBarChart({
   const CustomBarTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       const item = payload[0].payload as PlatformScore;
+      const isEngineActive = !activeEngines || activeEngines.some((ae) => ae.toLowerCase() === item.name.toLowerCase());
       return (
-        <div className="rounded-xl border border-gray-200/80 dark:border-zinc-800 bg-white/95 dark:bg-zinc-900/95 p-3 shadow-xl backdrop-blur-md text-xs space-y-1.5 min-w-[180px]">
+        <div className="rounded-xl border border-gray-200/80 dark:border-zinc-800 bg-white/95 dark:bg-zinc-900/95 p-3 shadow-xl backdrop-blur-md text-xs space-y-1.5 min-w-[190px]">
           <div className="flex items-center justify-between border-b border-gray-100 dark:border-zinc-800 pb-1 mb-1 font-semibold text-gray-900 dark:text-zinc-100">
             <div className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }} />
+              <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
               <span>{item.name}</span>
             </div>
             <span className="font-bold text-gray-900 dark:text-zinc-100 font-mono">{item.score}/100</span>
@@ -66,10 +74,22 @@ export function PlatformVisibilityBarChart({
               <span className="font-semibold text-gray-900 dark:text-zinc-100 font-mono">{item.mentionRate}%</span>
             </div>
           )}
+          <div className="flex justify-between text-[11px] text-gray-400 dark:text-zinc-500 pt-0.5 border-t border-gray-100 dark:border-zinc-800">
+            <span>Filter Status:</span>
+            <span className={cn('font-semibold font-mono', isEngineActive ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 dark:text-zinc-500')}>
+              {isEngineActive ? 'Active Engine' : 'Excluded'}
+            </span>
+          </div>
         </div>
       );
     }
     return null;
+  };
+
+  const handleBarClick = (entry: any) => {
+    if (entry && entry.name && onToggleEngine) {
+      onToggleEngine(entry.name);
+    }
   };
 
   return (
@@ -85,7 +105,7 @@ export function PlatformVisibilityBarChart({
           </span>
         </div>
         <CardDescription className="text-xs text-gray-500 dark:text-zinc-400">
-          Model-specific visibility scores
+          Ranked from highest to lowest visibility score (click to toggle)
         </CardDescription>
       </CardHeader>
 
@@ -118,10 +138,23 @@ export function PlatformVisibilityBarChart({
                 width={85}
               />
               <Tooltip content={<CustomBarTooltip />} />
-              <Bar dataKey="score" radius={[0, 6, 6, 0]} barSize={20}>
-                {chartData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
-                ))}
+              <Bar
+                dataKey="score"
+                radius={[0, 6, 6, 0]}
+                barSize={20}
+                className="cursor-pointer"
+                onClick={handleBarClick}
+              >
+                {chartData.map((entry, index) => {
+                  const isEngineActive = !activeEngines || activeEngines.some((ae) => ae.toLowerCase() === entry.name.toLowerCase());
+                  return (
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={entry.color}
+                      opacity={isEngineActive ? 1 : 0.25}
+                    />
+                  );
+                })}
               </Bar>
             </BarChart>
           </ResponsiveContainer>
@@ -146,10 +179,13 @@ export function PlatformVisibilityBarChart({
         {/* Subtle Description Subtext */}
         <div className="text-[11px] text-gray-500 dark:text-zinc-400 flex items-center justify-between pt-1">
           <span>Benchmarked across active engines</span>
-          <span className="font-medium text-blue-600 dark:text-blue-400">{chartData.length} Models Connected</span>
+          <span className="font-medium text-blue-600 dark:text-blue-400">
+            {activeCount} Active {activeCount === 1 ? 'Model' : 'Models'}
+          </span>
         </div>
       </CardContent>
     </Card>
   );
 }
+
 

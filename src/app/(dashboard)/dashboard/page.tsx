@@ -26,8 +26,8 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { getDashboardMetrics, DashboardMetrics } from '@/lib/actions/dashboard';
 import { KpiCard } from '@/components/dashboard/kpi-card';
-import { VisibilityTrendChart, KpiTimeSeriesPoint } from '@/components/dashboard/visibility-trend-chart';
-import { SovDoughnutChart } from '@/components/dashboard/sov-doughnut-chart';
+import { VisibilityTrendChart, KpiTimeSeriesPoint, MetricKey } from '@/components/dashboard/visibility-trend-chart';
+import { CompetitorSovBarChart } from '@/components/dashboard/competitor-sov-bar-chart';
 import { PlatformVisibilityBarChart, PlatformScore } from '@/components/dashboard/platform-visibility-bar-chart';
 import { useFilterContext } from '@/context/filter-context';
 
@@ -85,6 +85,9 @@ export default function DashboardPage() {
   const [metrics, setMetrics] = React.useState<DashboardMetrics | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
 
+  // Selected KPI Metric driving the main trendline chart
+  const [selectedMetric, setSelectedMetric] = React.useState<MetricKey>('visibility');
+
   // Active Engines & View State
   const [activeEngines, setActiveEngines] = React.useState<AIEngineName[]>([
     'ChatGPT',
@@ -94,6 +97,7 @@ export default function DashboardPage() {
     'Copilot',
   ]);
   const [viewState, setViewState] = React.useState<ViewState>('domain');
+
 
   // Load metrics from Supabase
   const loadDashboardData = React.useCallback(async () => {
@@ -246,18 +250,15 @@ export default function DashboardPage() {
       }));
   }, [activeEngines, dateMultiplier]);
 
-  // Competitor breakdown for doughnut chart
-  const competitorBreakdown = React.useMemo(() => {
-    const totalComp = competitorSov;
-    const share1 = Math.round(totalComp * 0.45);
-    const share2 = Math.round(totalComp * 0.32);
-    const share3 = totalComp - share1 - share2;
+  // Competitor breakdown items for bar chart
+  const competitorItems = React.useMemo(() => {
     return [
-      { name: 'Competitor Alpha (Omni)', share: share1, color: '#64748b' },
-      { name: 'Competitor Beta (Nexus)', share: share2, color: '#94a3b8' },
-      { name: 'Competitor Gamma (Apex)', share: share3, color: '#cbd5e1' },
+      { name: 'Acme Sync (You)', share: dynamicSov, color: '#3b82f6', isUser: true, delta: '+3.2%', domain: 'acmelabs.com' },
+      { name: 'Competitor Alpha (Omni)', share: 26, color: '#8b5cf6', isUser: false, delta: '-1.4%', domain: 'omnisync.com' },
+      { name: 'Competitor Beta (Nexus)', share: 18, color: '#06b6d4', isUser: false, delta: '-0.8%', domain: 'nexusai.io' },
+      { name: 'Competitor Gamma (Apex)', share: 14, color: '#f59e0b', isUser: false, delta: '+0.5%', domain: 'apexplatform.com' },
     ];
-  }, [competitorSov]);
+  }, [dynamicSov]);
 
   // Dynamic Domain Table Rows
   const dynamicDomainRows = React.useMemo(() => {
@@ -419,10 +420,10 @@ export default function DashboardPage() {
       ) : (
         <>
           {/* ===================================================================== */}
-          {/* Top KPI Cards (Retain Data, Preserve Order) */}
+          {/* Top KPI Cards (Interactive Metric Selector) */}
           {/* ===================================================================== */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5">
-            {/* Card 1: AI Visibility (78/100, Excellent, with green trend) */}
+            {/* Card 1: AI Visibility */}
             <KpiCard
               title="AI Visibility"
               value={`${dynamicVisibility}/100`}
@@ -432,12 +433,13 @@ export default function DashboardPage() {
               badgeText="Excellent"
               badgeVariant="emerald"
               period={dateRange}
-              subtext="Aggregated Score"
+              isSelected={selectedMetric === 'visibility'}
+              onClick={() => setSelectedMetric('visibility')}
               accentGlow="from-emerald-500/10 to-transparent"
               iconColor="text-emerald-600 dark:text-emerald-400"
             />
 
-            {/* Card 2: AI Share of Voice (42%, blue trend) */}
+            {/* Card 2: AI Share of Voice */}
             <KpiCard
               title="AI Share of Voice"
               value={`${dynamicSov}%`}
@@ -447,12 +449,13 @@ export default function DashboardPage() {
               badgeText={`${activeEngines.length} Models`}
               badgeVariant="blue"
               period="vs competitors"
-              subtext="Market Dominance"
+              isSelected={selectedMetric === 'shareOfVoice'}
+              onClick={() => setSelectedMetric('shareOfVoice')}
               accentGlow="from-blue-500/10 to-transparent"
               iconColor="text-blue-600 dark:text-blue-400"
             />
 
-            {/* Card 3: AI Mentions (44/56, purple trend) */}
+            {/* Card 3: AI Mentions */}
             <KpiCard
               title="AI Mentions"
               value={dynamicMentions.text}
@@ -462,12 +465,13 @@ export default function DashboardPage() {
               badgeText="Live Citations"
               badgeVariant="purple"
               period="prompts cited"
-              subtext="Primary Sources"
+              isSelected={selectedMetric === 'mentions'}
+              onClick={() => setSelectedMetric('mentions')}
               accentGlow="from-purple-500/10 to-transparent"
               iconColor="text-purple-600 dark:text-purple-400"
             />
 
-            {/* Card 4: Sentiment (92% Positive, green bar breakdown) */}
+            {/* Card 4: Sentiment */}
             <KpiCard
               title="Sentiment"
               value={`${dynamicSentiment.percentage}% Positive`}
@@ -475,33 +479,39 @@ export default function DashboardPage() {
               badgeText="Positive"
               badgeVariant="emerald"
               breakdown={dynamicSentiment.breakdown}
-              accentGlow="from-emerald-500/10 to-transparent"
-              iconColor="text-emerald-600 dark:text-emerald-400"
+              isSelected={selectedMetric === 'sentiment'}
+              onClick={() => setSelectedMetric('sentiment')}
+              accentGlow="from-amber-500/10 to-transparent"
+              iconColor="text-amber-600 dark:text-amber-400"
             />
           </div>
 
           {/* ===================================================================== */}
-          {/* Main Graph Section: AI Visibility Over Time (4 KPIs) */}
+          {/* Main Graph Section: Dynamic Single-Metric Trendline */}
           {/* ===================================================================== */}
           <VisibilityTrendChart
             data={dynamicTimeSeriesData}
             dateRange={dateRange}
+            selectedMetric={selectedMetric}
+            onSelectMetric={setSelectedMetric}
           />
 
           {/* ===================================================================== */}
-          {/* New Bottom Chart Section: Side-by-Side Cards */}
+          {/* Bottom Chart Section: Competitor Breakdown & Platform Visibility */}
           {/* ===================================================================== */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-            {/* Left Chart: AI Share of Voice (User vs. Competitors) Doughnut */}
-            <SovDoughnutChart
+            {/* Left Chart: Competitor Share of Voice Breakdown Horizontal Bar */}
+            <CompetitorSovBarChart
               userSov={dynamicSov}
-              competitorBreakdown={competitorBreakdown}
               brandName="Acme Sync (You)"
+              competitors={competitorItems}
             />
 
-            {/* Right Chart: Brand Visibility by Platform Horizontal Bar */}
+            {/* Right Chart: Brand Visibility by Platform Horizontal Bar (Interactive Sync) */}
             <PlatformVisibilityBarChart
               data={dynamicPlatformScores}
+              activeEngines={activeEngines}
+              onToggleEngine={toggleEngine}
             />
           </div>
 
@@ -514,6 +524,7 @@ export default function DashboardPage() {
               <div>
                 <div className="flex items-center gap-2">
                   <h2 className="text-base font-semibold text-gray-900 dark:text-white">
+
                     {viewState === 'domain' ? 'My Tracked Domains' : 'Competitor Head-to-Head Matchup'}
                   </h2>
                   <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 border border-blue-200/60 dark:border-blue-800/60">
