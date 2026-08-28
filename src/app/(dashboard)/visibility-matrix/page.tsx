@@ -318,6 +318,9 @@ export default function SourceIntelligencePage() {
     setTimeout(() => setSyncFeedback(null), 3000);
   };
 
+  const [selectedCategory, setSelectedCategory] = React.useState<string>('ALL');
+  const [selectedDomain, setSelectedDomain] = React.useState<string>('');
+
   const kpis = React.useMemo(() => calculateKpis(domains), [domains]);
   const categoryBreakdown = React.useMemo(() => calculateCategoryBreakdown(domains), [domains]);
 
@@ -378,12 +381,22 @@ export default function SourceIntelligencePage() {
       <DomainCharts
         topDomains={domains}
         categoryBreakdown={categoryBreakdown}
+        selectedCategory={selectedCategory}
+        onSelectCategory={setSelectedCategory}
+        selectedDomain={selectedDomain}
+        onSelectDomain={setSelectedDomain}
       />
 
       {/* ========================================================================= */}
       {/* Component 3: All Tracked Domains Sortable Table */}
       {/* ========================================================================= */}
-      <DomainTable domains={domains} />
+      <DomainTable
+        domains={domains}
+        selectedCategory={selectedCategory}
+        onSelectCategory={setSelectedCategory}
+        selectedDomain={selectedDomain}
+        onSelectDomain={setSelectedDomain}
+      />
 
     </div>
   );
