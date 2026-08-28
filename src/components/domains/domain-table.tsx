@@ -13,7 +13,15 @@ import {
   TrendingUp,
   TrendingDown,
   Sparkles,
+  Maximize2,
 } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { SourceDomain, DomainCategoryType } from '@/types/domains';
@@ -68,6 +76,7 @@ export function DomainTable({
   selectedDomain: controlledDomain,
   onSelectDomain,
 }: DomainTableProps) {
+  const [isExpanded, setIsExpanded] = React.useState(false);
   const [internalCategory, setInternalCategory] = React.useState<string>('ALL');
   const [searchQuery, setSearchQuery] = React.useState('');
   const [sortField, setSortField] = React.useState<SortField>('totalCitations');
@@ -213,16 +222,28 @@ export function DomainTable({
             ))}
           </div>
 
-          {/* Export CSV Button */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleExportCsv}
-            className="h-8.5 text-xs rounded-xl border-gray-200 dark:border-zinc-800 gap-1.5 cursor-pointer shrink-0"
-          >
-            <Download className="w-3.5 h-3.5 text-gray-500" />
-            <span>Export CSV</span>
-          </Button>
+          {/* Action Buttons: Export CSV & Expand Table */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportCsv}
+              className="h-8.5 text-xs rounded-xl border-gray-200 dark:border-zinc-800 gap-1.5 cursor-pointer"
+            >
+              <Download className="w-3.5 h-3.5 text-gray-500" />
+              <span>Export CSV</span>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsExpanded(true)}
+              title="Expand table"
+              className="h-8.5 px-2.5 text-xs rounded-xl border-gray-200 dark:border-zinc-800 gap-1.5 cursor-pointer text-gray-700 dark:text-zinc-300"
+            >
+              <Maximize2 className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Expand</span>
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -475,6 +496,154 @@ export function DomainTable({
         </table>
       </div>
 
+      {/* Full-Screen Expanded Table Dialog Modal */}
+      <Dialog open={isExpanded} onOpenChange={setIsExpanded}>
+        <DialogContent className="max-w-6xl p-6 bg-white dark:bg-zinc-900 border-gray-200 dark:border-zinc-800 shadow-2xl rounded-2xl max-h-[90vh] flex flex-col">
+          <DialogHeader className="pb-3 border-b border-gray-100 dark:border-zinc-800 shrink-0">
+            <div className="flex items-center justify-between pr-6">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400">
+                  <Globe className="w-5 h-5" />
+                </div>
+                <div>
+                  <DialogTitle className="text-lg font-bold text-gray-900 dark:text-white">
+                    Tracked Source Domains (Expanded Inspector)
+                  </DialogTitle>
+                  <DialogDescription className="text-xs text-gray-500 dark:text-zinc-400">
+                    Full dataset view — {processedDomains.length} domains matching filters
+                  </DialogDescription>
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExportCsv}
+                className="h-8.5 text-xs rounded-xl border-gray-200 dark:border-zinc-800 gap-1.5 cursor-pointer"
+              >
+                <Download className="w-3.5 h-3.5 text-gray-500" />
+                <span>Export CSV</span>
+              </Button>
+            </div>
+          </DialogHeader>
+
+          {/* Search and Category Filters inside Modal */}
+          <div className="py-3 flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 dark:border-zinc-800 shrink-0">
+            <div className="relative w-72">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search domain..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-3 py-1.5 text-xs rounded-xl border border-gray-200 dark:border-zinc-800 bg-gray-50/50 dark:bg-zinc-800/50 text-gray-900 dark:text-zinc-100 placeholder-gray-400 focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+              />
+            </div>
+
+            <div className="flex items-center gap-1.5 overflow-x-auto">
+              {['ALL', 'Tech Media', 'Review & Aggregator', 'Community & Forum', 'Analyst & Research', 'Official Documentation'].map((cat) => (
+                <button
+                  key={cat}
+                  type="button"
+                  onClick={() => handleCategoryChange(cat)}
+                  className={cn(
+                    'px-2.5 py-1 rounded-lg text-xs font-medium transition-all shrink-0 cursor-pointer select-none',
+                    selectedCategory === cat
+                      ? 'bg-blue-600 text-white shadow-2xs font-semibold'
+                      : 'text-gray-600 dark:text-zinc-400 hover:bg-gray-100 dark:hover:bg-zinc-800'
+                  )}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Scrollable Table Area */}
+          <div className="overflow-auto flex-1 min-h-0 pt-2">
+            <table className="w-full text-left border-collapse">
+              <thead className="sticky top-0 bg-gray-50 dark:bg-zinc-900 z-10 shadow-2xs">
+                <tr className="border-b border-gray-100 dark:border-zinc-800 text-[11px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-wider select-none">
+                  <th onClick={() => handleSort('domain')} className="py-3 px-5 cursor-pointer hover:text-gray-900 dark:hover:text-white">
+                    <div className="flex items-center gap-1.5">
+                      <span>Domain</span>
+                      {sortField === 'domain' ? (sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-blue-600" /> : <ArrowDown className="w-3.5 h-3.5 text-blue-600" />) : <ArrowUpDown className="w-3.5 h-3.5 opacity-40" />}
+                    </div>
+                  </th>
+                  <th onClick={() => handleSort('category')} className="py-3 px-4 cursor-pointer hover:text-gray-900 dark:hover:text-white">
+                    <div className="flex items-center gap-1.5">
+                      <span>Category</span>
+                      {sortField === 'category' ? (sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-blue-600" /> : <ArrowDown className="w-3.5 h-3.5 text-blue-600" />) : <ArrowUpDown className="w-3.5 h-3.5 opacity-40" />}
+                    </div>
+                  </th>
+                  <th onClick={() => handleSort('domainAuthority')} className="py-3 px-4 cursor-pointer hover:text-gray-900 dark:hover:text-white">
+                    <div className="flex items-center gap-1.5">
+                      <span>Domain Authority</span>
+                      {sortField === 'domainAuthority' ? (sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-blue-600" /> : <ArrowDown className="w-3.5 h-3.5 text-blue-600" />) : <ArrowUpDown className="w-3.5 h-3.5 opacity-40" />}
+                    </div>
+                  </th>
+                  <th onClick={() => handleSort('totalCitations')} className="py-3 px-4 text-right cursor-pointer hover:text-gray-900 dark:hover:text-white">
+                    <div className="flex items-center justify-end gap-1.5">
+                      <span>Total Citations</span>
+                      {sortField === 'totalCitations' ? (sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-blue-600" /> : <ArrowDown className="w-3.5 h-3.5 text-blue-600" />) : <ArrowUpDown className="w-3.5 h-3.5 opacity-40" />}
+                    </div>
+                  </th>
+                  <th onClick={() => handleSort('momChange')} className="py-3 px-5 text-right cursor-pointer hover:text-gray-900 dark:hover:text-white">
+                    <div className="flex items-center justify-end gap-1.5">
+                      <span>MoM Trend</span>
+                      {sortField === 'momChange' ? (sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-blue-600" /> : <ArrowDown className="w-3.5 h-3.5 text-blue-600" />) : <ArrowUpDown className="w-3.5 h-3.5 opacity-40" />}
+                    </div>
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 dark:divide-zinc-800/60 text-xs">
+                {processedDomains.map((domain) => {
+                  const badge = CATEGORY_BADGES[domain.category] || CATEGORY_BADGES['Tech Media'];
+                  const isPositiveMoM = domain.momChange >= 0;
+
+                  return (
+                    <tr key={`modal-${domain.id}`} className="hover:bg-gray-50/70 dark:hover:bg-zinc-800/40 transition-colors">
+                      <td className="py-3.5 px-5">
+                        <div className="flex items-center gap-3">
+                          <DomainFavicon domainOrUrl={domain.domain} size={28} className="rounded-lg shadow-2xs shrink-0" fallbackInitial />
+                          <div className="min-w-0">
+                            <a href={`https://${domain.domain}`} target="_blank" rel="noreferrer" className="font-semibold text-gray-900 dark:text-zinc-100 hover:text-blue-600 flex items-center gap-1.5">
+                              <span>{domain.domain}</span>
+                              <ExternalLink className="w-3 h-3 text-gray-400" />
+                            </a>
+                            <div className="text-[11px] text-gray-400">DA: {domain.domainAuthority} • Total: {domain.totalCitations}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-4 whitespace-nowrap">
+                        <span className={cn('px-2.5 py-1 rounded-full text-[11px] font-semibold border', badge.bg, badge.text, badge.border)}>
+                          {domain.category}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4 whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono font-bold text-gray-900 dark:text-white w-6">{domain.domainAuthority}</span>
+                          <div className="w-24 h-2 rounded-full bg-gray-100 dark:bg-zinc-800 overflow-hidden">
+                            <div className="h-full rounded-full bg-emerald-500" style={{ width: `${domain.domainAuthority}%` }} />
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-4 text-right font-bold font-mono text-gray-900 dark:text-white whitespace-nowrap">
+                        {domain.totalCitations.toLocaleString()}
+                      </td>
+                      <td className="py-3.5 px-5 text-right whitespace-nowrap">
+                        <span className={cn('inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[11px] font-bold border', isPositiveMoM ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-red-50 text-red-700 border-red-200')}>
+                          {isPositiveMoM ? <TrendingUp className="w-3 h-3 text-emerald-600" /> : <TrendingDown className="w-3 h-3 text-red-600" />}
+                          <span>{isPositiveMoM ? `+${domain.momChange}%` : `${domain.momChange}%`}</span>
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

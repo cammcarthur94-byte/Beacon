@@ -12,7 +12,14 @@ import {
 } from 'recharts';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { Eye, PieChart as PieIcon, MessageSquare, Heart, TrendingUp } from 'lucide-react';
+import { Eye, PieChart as PieIcon, MessageSquare, Heart, TrendingUp, Maximize2 } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
 
 export interface KpiTimeSeriesPoint {
   date: string;
@@ -128,6 +135,7 @@ export function VisibilityTrendChart({
   selectedMetric = 'visibility',
   onSelectMetric,
 }: VisibilityTrendChartProps) {
+  const [isExpanded, setIsExpanded] = React.useState(false);
   const currentMetric = METRIC_CONFIGS[selectedMetric] || METRIC_CONFIGS.visibility;
   const chartData = data && data.length > 0 ? data : DEFAULT_SAMPLE_DATA;
 
@@ -168,106 +176,209 @@ export function VisibilityTrendChart({
   };
 
   return (
-    <Card className="border-gray-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-2xs col-span-1">
-      <CardHeader className="pb-3">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <div className="flex items-center gap-2">
-              <CardTitle className="text-base font-bold text-gray-900 dark:text-white">
-                {currentMetric.name}
-              </CardTitle>
-              <span className={cn(
-                'text-[10px] font-medium px-2 py-0.5 rounded-full border',
-                currentMetric.activeBg,
-                currentMetric.activeBorder,
-                currentMetric.activeText
-              )}>
-                {currentMetric.growthText}
-              </span>
-            </div>
-            <CardDescription className="text-xs text-gray-500 dark:text-zinc-400 mt-0.5">
-              {currentMetric.description} ({dateRange})
-            </CardDescription>
-          </div>
-
-          {/* Metric Selector Pills */}
-          <div className="flex items-center gap-1.5 flex-wrap">
-            {(Object.keys(METRIC_CONFIGS) as MetricKey[]).map((key) => {
-              const m = METRIC_CONFIGS[key];
-              const isSelected = selectedMetric === key;
-              return (
+    <>
+      <Card className="border-gray-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-2xs col-span-1">
+        <CardHeader className="pb-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <CardTitle className="text-base font-bold text-gray-900 dark:text-white">
+                  {currentMetric.name}
+                </CardTitle>
+                <span className={cn(
+                  'text-[10px] font-medium px-2 py-0.5 rounded-full border',
+                  currentMetric.activeBg,
+                  currentMetric.activeBorder,
+                  currentMetric.activeText
+                )}>
+                  {currentMetric.growthText}
+                </span>
                 <button
-                  key={m.key}
                   type="button"
-                  onClick={() => onSelectMetric?.(m.key)}
-                  className={cn(
-                    'px-2.5 py-1 rounded-full text-xs font-medium border transition-all duration-200 flex items-center gap-1.5 cursor-pointer select-none shadow-2xs',
-                    isSelected
-                      ? cn(m.activeBg, m.activeBorder, m.activeText, 'font-semibold')
-                      : 'bg-white dark:bg-zinc-900 border-gray-200 dark:border-zinc-800 text-gray-400 dark:text-zinc-500 opacity-60 hover:opacity-100'
-                  )}
+                  onClick={() => setIsExpanded(true)}
+                  title="Expand graph"
+                  className="p-1 rounded-lg border border-gray-200/80 dark:border-zinc-800 hover:bg-gray-100 dark:hover:bg-zinc-800 text-gray-500 hover:text-gray-900 dark:hover:text-zinc-100 transition-colors cursor-pointer ml-1"
                 >
-                  <span
-                    className={cn(
-                      'w-1.5 h-1.5 rounded-full inline-block transition-transform',
-                      isSelected ? 'scale-125' : 'bg-gray-400 dark:bg-zinc-600'
-                    )}
-                    style={{ backgroundColor: isSelected ? m.color : undefined }}
-                  />
-                  <span>{m.shortName}</span>
-                  {isSelected && <span className="text-[10px] font-mono pl-0.5">✓</span>}
+                  <Maximize2 className="w-3.5 h-3.5" />
                 </button>
-              );
-            })}
+              </div>
+              <CardDescription className="text-xs text-gray-500 dark:text-zinc-400 mt-0.5">
+                {currentMetric.description} ({dateRange})
+              </CardDescription>
+            </div>
+
+            {/* Metric Selector Pills */}
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {(Object.keys(METRIC_CONFIGS) as MetricKey[]).map((key) => {
+                const m = METRIC_CONFIGS[key];
+                const isSelected = selectedMetric === key;
+                return (
+                  <button
+                    key={m.key}
+                    type="button"
+                    onClick={() => onSelectMetric?.(m.key)}
+                    className={cn(
+                      'px-2.5 py-1 rounded-full text-xs font-medium border transition-all duration-200 flex items-center gap-1.5 cursor-pointer select-none shadow-2xs',
+                      isSelected
+                        ? cn(m.activeBg, m.activeBorder, m.activeText, 'font-semibold')
+                        : 'bg-white dark:bg-zinc-900 border-gray-200 dark:border-zinc-800 text-gray-400 dark:text-zinc-500 opacity-60 hover:opacity-100'
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        'w-1.5 h-1.5 rounded-full inline-block transition-transform',
+                        isSelected ? 'scale-125' : 'bg-gray-400 dark:bg-zinc-600'
+                      )}
+                      style={{ backgroundColor: isSelected ? m.color : undefined }}
+                    />
+                    <span>{m.shortName}</span>
+                    {isSelected && <span className="text-[10px] font-mono pl-0.5">✓</span>}
+                  </button>
+                );
+              })}
+            </div>
           </div>
-        </div>
-      </CardHeader>
+        </CardHeader>
 
-      <CardContent className="pt-2">
-        <div className="h-[300px] w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={chartData} margin={{ top: 10, right: 15, left: -20, bottom: 0 }}>
-              <defs>
-                <linearGradient id={currentMetric.gradientId} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={currentMetric.color} stopOpacity={0.28} />
-                  <stop offset="95%" stopColor={currentMetric.color} stopOpacity={0.0} />
-                </linearGradient>
-              </defs>
+        <CardContent className="pt-2">
+          <div className="h-[300px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={chartData} margin={{ top: 10, right: 15, left: -20, bottom: 0 }}>
+                <defs>
+                  <linearGradient id={currentMetric.gradientId} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor={currentMetric.color} stopOpacity={0.28} />
+                    <stop offset="95%" stopColor={currentMetric.color} stopOpacity={0.0} />
+                  </linearGradient>
+                </defs>
 
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(150,150,150,0.12)" vertical={false} />
-              <XAxis
-                dataKey="date"
-                stroke="#71717a"
-                fontSize={11}
-                tickLine={false}
-                axisLine={false}
-                tickMargin={8}
-              />
-              <YAxis
-                stroke="#71717a"
-                fontSize={11}
-                tickLine={false}
-                axisLine={false}
-                domain={currentMetric.yDomain}
-                tickFormatter={(val) => (currentMetric.unit === '/100' ? `${val}` : `${val}%`)}
-              />
-              <Tooltip content={<CustomTooltip />} />
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(150,150,150,0.12)" vertical={false} />
+                <XAxis
+                  dataKey="date"
+                  stroke="#71717a"
+                  fontSize={11}
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={8}
+                />
+                <YAxis
+                  stroke="#71717a"
+                  fontSize={11}
+                  tickLine={false}
+                  axisLine={false}
+                  domain={currentMetric.yDomain}
+                  tickFormatter={(val) => (currentMetric.unit === '/100' ? `${val}` : `${val}%`)}
+                />
+                <Tooltip content={<CustomTooltip />} />
 
-              <Area
-                type="monotone"
-                dataKey={selectedMetric}
-                name={currentMetric.shortName}
-                stroke={currentMetric.color}
-                strokeWidth={2.5}
-                fillOpacity={1}
-                fill={`url(#${currentMetric.gradientId})`}
-                activeDot={{ r: 6, fill: currentMetric.color, stroke: '#ffffff', strokeWidth: 2 }}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-      </CardContent>
-    </Card>
+                <Area
+                  type="monotone"
+                  dataKey={selectedMetric}
+                  name={currentMetric.shortName}
+                  stroke={currentMetric.color}
+                  strokeWidth={2.5}
+                  fillOpacity={1}
+                  fill={`url(#${currentMetric.gradientId})`}
+                  activeDot={{ r: 6, fill: currentMetric.color, stroke: '#ffffff', strokeWidth: 2 }}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Expanded Modal Dialog */}
+      <Dialog open={isExpanded} onOpenChange={setIsExpanded}>
+        <DialogContent className="max-w-5xl p-6 bg-white dark:bg-zinc-900 border-gray-200 dark:border-zinc-800 shadow-2xl rounded-2xl">
+          <DialogHeader className="pb-3 border-b border-gray-100 dark:border-zinc-800">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pr-6">
+              <div>
+                <DialogTitle className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                  <span>{currentMetric.name} (Expanded View)</span>
+                </DialogTitle>
+                <DialogDescription className="text-xs text-gray-500 dark:text-zinc-400">
+                  {currentMetric.description} — Aggregated time-series trend ({dateRange})
+                </DialogDescription>
+              </div>
+
+              {/* Metric Selector Pills inside modal */}
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {(Object.keys(METRIC_CONFIGS) as MetricKey[]).map((key) => {
+                  const m = METRIC_CONFIGS[key];
+                  const isSelected = selectedMetric === key;
+                  return (
+                    <button
+                      key={m.key}
+                      type="button"
+                      onClick={() => onSelectMetric?.(m.key)}
+                      className={cn(
+                        'px-3 py-1 rounded-full text-xs font-medium border transition-all duration-200 flex items-center gap-1.5 cursor-pointer select-none shadow-2xs',
+                        isSelected
+                          ? cn(m.activeBg, m.activeBorder, m.activeText, 'font-semibold')
+                          : 'bg-white dark:bg-zinc-900 border-gray-200 dark:border-zinc-800 text-gray-400 dark:text-zinc-500 opacity-60 hover:opacity-100'
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          'w-2 h-2 rounded-full inline-block',
+                          isSelected ? 'scale-125' : 'bg-gray-400 dark:bg-zinc-600'
+                        )}
+                        style={{ backgroundColor: isSelected ? m.color : undefined }}
+                      />
+                      <span>{m.shortName}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </DialogHeader>
+
+          {/* Large High-Res Canvas */}
+          <div className="h-[420px] w-full pt-4">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={chartData} margin={{ top: 10, right: 20, left: -10, bottom: 0 }}>
+                <defs>
+                  <linearGradient id={`modal_${currentMetric.gradientId}`} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor={currentMetric.color} stopOpacity={0.32} />
+                    <stop offset="95%" stopColor={currentMetric.color} stopOpacity={0.0} />
+                  </linearGradient>
+                </defs>
+
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(150,150,150,0.15)" vertical={false} />
+                <XAxis
+                  dataKey="date"
+                  stroke="#71717a"
+                  fontSize={12}
+                  tickLine={false}
+                  axisLine={{ stroke: 'rgba(150,150,150,0.2)' }}
+                  tickMargin={10}
+                />
+                <YAxis
+                  stroke="#71717a"
+                  fontSize={12}
+                  tickLine={false}
+                  axisLine={false}
+                  domain={currentMetric.yDomain}
+                  tickFormatter={(val) => (currentMetric.unit === '/100' ? `${val}` : `${val}%`)}
+                />
+                <Tooltip content={<CustomTooltip />} />
+
+                <Area
+                  type="monotone"
+                  dataKey={selectedMetric}
+                  name={currentMetric.shortName}
+                  stroke={currentMetric.color}
+                  strokeWidth={3.5}
+                  fillOpacity={1}
+                  fill={`url(#modal_${currentMetric.gradientId})`}
+                  dot={{ r: 4, fill: currentMetric.color, stroke: '#ffffff', strokeWidth: 1.5 }}
+                  activeDot={{ r: 7, fill: currentMetric.color, stroke: '#ffffff', strokeWidth: 2 }}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 

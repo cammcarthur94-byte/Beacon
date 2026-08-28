@@ -13,7 +13,15 @@ import {
   Layers,
   ArrowUpRight,
   SlidersHorizontal,
+  Maximize2,
 } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { AuditRunItem, EngineType, SentimentType } from '@/types/responses';
@@ -79,6 +87,7 @@ export function ResponseFeed({
   onSelectAudit,
   selectedAuditId,
 }: ResponseFeedProps) {
+  const [isExpanded, setIsExpanded] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState('');
   const [selectedEngine, setSelectedEngine] = React.useState<'ALL' | EngineType>('ALL');
   const [selectedSentiment, setSelectedSentiment] = React.useState<'ALL' | SentimentType>('ALL');
@@ -201,6 +210,18 @@ export function ResponseFeed({
               Not Cited
             </button>
           </div>
+
+          {/* Expand Feed Button */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsExpanded(true)}
+            title="Expand feed"
+            className="h-8.5 px-2.5 text-xs rounded-xl border-gray-200 dark:border-zinc-800 gap-1.5 cursor-pointer text-gray-700 dark:text-zinc-300 shrink-0"
+          >
+            <Maximize2 className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Expand</span>
+          </Button>
         </div>
       </div>
 
@@ -320,6 +341,139 @@ export function ResponseFeed({
           })}
         </div>
       )}
+
+      {/* Full Expanded Master Feed Dialog Modal */}
+      <Dialog open={isExpanded} onOpenChange={setIsExpanded}>
+        <DialogContent className="max-w-6xl p-6 bg-white dark:bg-zinc-900 border-gray-200 dark:border-zinc-800 shadow-2xl rounded-2xl max-h-[90vh] flex flex-col">
+          <DialogHeader className="pb-3 border-b border-gray-100 dark:border-zinc-800 shrink-0">
+            <div className="flex items-center justify-between pr-6">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400">
+                  <Layers className="w-5 h-5" />
+                </div>
+                <div>
+                  <DialogTitle className="text-lg font-bold text-gray-900 dark:text-white">
+                    Recent AI Audit Runs (Expanded Feed)
+                  </DialogTitle>
+                  <DialogDescription className="text-xs text-gray-500 dark:text-zinc-400">
+                    Comprehensive audit log — {filteredItems.length} runs matching criteria
+                  </DialogDescription>
+                </div>
+              </div>
+            </div>
+          </DialogHeader>
+
+          {/* Search and Filters inside Dialog */}
+          <div className="py-3 flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 dark:border-zinc-800 shrink-0">
+            <div className="relative w-72">
+              <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search prompt, response, or domain..."
+                className="w-full pl-9 pr-3 py-1.5 text-xs rounded-xl border border-gray-200 dark:border-zinc-800 bg-gray-50/50 dark:bg-zinc-800/50 text-gray-900 dark:text-zinc-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+              />
+            </div>
+
+            <div className="flex items-center gap-1.5 overflow-x-auto">
+              <button
+                type="button"
+                onClick={() => setSelectedEngine('ALL')}
+                className={cn(
+                  'px-2.5 py-1 rounded-lg text-xs font-medium transition-all shrink-0 cursor-pointer select-none',
+                  selectedEngine === 'ALL'
+                    ? 'bg-gray-900 text-white dark:bg-white dark:text-zinc-900 shadow-2xs'
+                    : 'text-gray-600 dark:text-zinc-400 hover:bg-gray-100 dark:hover:bg-zinc-800'
+                )}
+              >
+                All Engines
+              </button>
+              {ALL_ENGINES.map((eng) => (
+                <button
+                  key={eng}
+                  type="button"
+                  onClick={() => setSelectedEngine(eng)}
+                  className={cn(
+                    'px-2.5 py-1 rounded-lg text-xs font-medium transition-all shrink-0 cursor-pointer select-none',
+                    selectedEngine === eng
+                      ? 'bg-blue-600 text-white shadow-2xs'
+                      : 'text-gray-600 dark:text-zinc-400 hover:bg-gray-100 dark:hover:bg-zinc-800'
+                  )}
+                >
+                  {eng}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Scrollable Expanded Feed List */}
+          <div className="overflow-auto flex-1 min-h-0 pt-2 space-y-2.5">
+            {filteredItems.map((item) => {
+              const engConfig = ENGINE_CONFIG[item.engine] || {
+                label: item.engine,
+                bg: 'bg-blue-50 dark:bg-blue-950/60',
+                text: 'text-blue-700 dark:text-blue-300',
+                border: 'border-blue-200 dark:border-blue-800/60',
+                dot: 'bg-blue-500',
+              };
+
+              return (
+                <div
+                  key={`modal-feed-${item.id}`}
+                  onClick={() => {
+                    onSelectAudit(item);
+                    setIsExpanded(false);
+                  }}
+                  className="p-4 rounded-xl border border-gray-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-blue-400 hover:shadow-xs transition-all cursor-pointer flex flex-col md:flex-row md:items-center justify-between gap-4"
+                >
+                  <div className="flex items-start md:items-center gap-3.5 flex-1 min-w-0">
+                    <span className={cn('inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border shrink-0', engConfig.bg, engConfig.text, engConfig.border)}>
+                      <EngineIcon engine={item.engine} size={14} />
+                      <span>{item.engine}</span>
+                    </span>
+                    <span className="text-xs text-gray-400 shrink-0 flex items-center gap-1">
+                      <Clock className="w-3.5 h-3.5" />
+                      <span>{item.timeAgo}</span>
+                    </span>
+                    <span className="text-gray-300 dark:text-zinc-700 hidden md:inline">•</span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-semibold text-gray-900 dark:text-zinc-100 truncate">
+                        &ldquo;{item.prompt}&rdquo;
+                      </p>
+                      <p className="text-[11px] text-gray-500 truncate mt-0.5">
+                        {item.rawResponse}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-4 shrink-0">
+                    {item.isBrandCited ? (
+                      <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                        <span>Cited</span>
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-xs font-semibold text-rose-500">
+                        <XCircle className="w-4 h-4 text-rose-500" />
+                        <span>Not Cited</span>
+                      </span>
+                    )}
+
+                    <span className={cn('inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold', item.sentiment === 'Positive' && 'bg-green-100 text-green-800', item.sentiment === 'Neutral' && 'bg-yellow-100 text-yellow-800', (item.sentiment === 'Negative' || item.sentiment === 'Omitted') && 'bg-red-100 text-red-800')}>
+                      {item.sentiment}
+                    </span>
+
+                    <span className="font-mono text-xs font-bold text-gray-900 dark:text-zinc-100 w-16 text-right">
+                      {item.mentionRank !== null ? `#${item.mentionRank}` : 'Unranked'}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

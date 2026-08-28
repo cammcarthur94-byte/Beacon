@@ -20,7 +20,15 @@ import {
   MessageSquare,
   Heart,
   BarChart3,
+  Maximize2,
 } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
 
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -97,6 +105,7 @@ export default function DashboardPage() {
     'Copilot',
   ]);
   const [viewState, setViewState] = React.useState<ViewState>('domain');
+  const [isTableExpanded, setIsTableExpanded] = React.useState(false);
 
 
   // Load metrics from Supabase
@@ -540,35 +549,48 @@ export default function DashboardPage() {
                 </p>
               </div>
 
-              {/* Segmented Control Switch */}
-              <div className="inline-flex items-center p-1 rounded-xl bg-gray-200/70 dark:bg-zinc-800 border border-gray-300/60 dark:border-zinc-700/60 shadow-inner select-none self-start sm:self-auto">
-                <button
-                  type="button"
-                  onClick={() => setViewState('domain')}
-                  className={cn(
-                    'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer',
-                    viewState === 'domain'
-                      ? 'bg-white dark:bg-zinc-900 text-gray-900 dark:text-white shadow-xs font-semibold'
-                      : 'text-gray-600 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-zinc-200'
-                  )}
-                >
-                  <Globe className="w-3.5 h-3.5" />
-                  <span>My Domains</span>
-                </button>
+              {/* Segmented Control Switch & Expand Button */}
+              <div className="flex items-center gap-2 self-start sm:self-auto">
+                <div className="inline-flex items-center p-1 rounded-xl bg-gray-200/70 dark:bg-zinc-800 border border-gray-300/60 dark:border-zinc-700/60 shadow-inner select-none">
+                  <button
+                    type="button"
+                    onClick={() => setViewState('domain')}
+                    className={cn(
+                      'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer',
+                      viewState === 'domain'
+                        ? 'bg-white dark:bg-zinc-900 text-gray-900 dark:text-white shadow-xs font-semibold'
+                        : 'text-gray-600 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-zinc-200'
+                    )}
+                  >
+                    <Globe className="w-3.5 h-3.5" />
+                    <span>My Domains</span>
+                  </button>
 
-                <button
-                  type="button"
-                  onClick={() => setViewState('competitor')}
-                  className={cn(
-                    'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer',
-                    viewState === 'competitor'
-                      ? 'bg-white dark:bg-zinc-900 text-gray-900 dark:text-white shadow-xs font-semibold'
-                      : 'text-gray-600 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-zinc-200'
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => setViewState('competitor')}
+                    className={cn(
+                      'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer',
+                      viewState === 'competitor'
+                        ? 'bg-white dark:bg-zinc-900 text-gray-900 dark:text-white shadow-xs font-semibold'
+                        : 'text-gray-600 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-zinc-200'
+                    )}
+                  >
+                    <Users className="w-3.5 h-3.5" />
+                    <span>Competitor Matchup</span>
+                  </button>
+                </div>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsTableExpanded(true)}
+                  title="Expand table"
+                  className="h-8.5 px-2.5 text-xs rounded-xl border-gray-200 dark:border-zinc-800 gap-1.5 cursor-pointer text-gray-700 dark:text-zinc-300"
                 >
-                  <Users className="w-3.5 h-3.5" />
-                  <span>Competitor Matchup</span>
-                </button>
+                  <Maximize2 className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Expand</span>
+                </Button>
               </div>
             </div>
 
@@ -692,6 +714,119 @@ export default function DashboardPage() {
               </div>
             )}
           </div>
+
+          {/* Full-Screen Expanded Dual-State Table Dialog Modal */}
+          <Dialog open={isTableExpanded} onOpenChange={setIsTableExpanded}>
+            <DialogContent className="max-w-6xl p-6 bg-white dark:bg-zinc-900 border-gray-200 dark:border-zinc-800 shadow-2xl rounded-2xl max-h-[90vh] flex flex-col">
+              <DialogHeader className="pb-3 border-b border-gray-100 dark:border-zinc-800 shrink-0">
+                <div className="flex items-center justify-between pr-6">
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400">
+                      {viewState === 'domain' ? <Globe className="w-5 h-5" /> : <Users className="w-5 h-5" />}
+                    </div>
+                    <div>
+                      <DialogTitle className="text-lg font-bold text-gray-900 dark:text-white">
+                        {viewState === 'domain' ? 'My Tracked Domains (Expanded View)' : 'Competitor Head-to-Head Matchup (Expanded View)'}
+                      </DialogTitle>
+                      <DialogDescription className="text-xs text-gray-500 dark:text-zinc-400">
+                        {viewState === 'domain'
+                          ? 'Detailed citation footprint and performance by AI engine'
+                          : 'Comprehensive market share displacement breakdown against competitors'}
+                      </DialogDescription>
+                    </div>
+                  </div>
+
+                  {/* Segmented Control Switch inside modal */}
+                  <div className="inline-flex items-center p-1 rounded-xl bg-gray-200/70 dark:bg-zinc-800 border border-gray-300/60 dark:border-zinc-700/60 shadow-inner select-none">
+                    <button
+                      type="button"
+                      onClick={() => setViewState('domain')}
+                      className={cn(
+                        'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer',
+                        viewState === 'domain'
+                          ? 'bg-white dark:bg-zinc-900 text-gray-900 dark:text-white shadow-xs font-semibold'
+                          : 'text-gray-600 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-zinc-200'
+                      )}
+                    >
+                      <Globe className="w-3.5 h-3.5" />
+                      <span>My Domains</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setViewState('competitor')}
+                      className={cn(
+                        'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer',
+                        viewState === 'competitor'
+                          ? 'bg-white dark:bg-zinc-900 text-gray-900 dark:text-white shadow-xs font-semibold'
+                          : 'text-gray-600 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-zinc-200'
+                      )}
+                    >
+                      <Users className="w-3.5 h-3.5" />
+                      <span>Competitors</span>
+                    </button>
+                  </div>
+                </div>
+              </DialogHeader>
+
+              {/* Scrollable Table Content */}
+              <div className="overflow-auto flex-1 min-h-0 pt-2">
+                <table className="w-full text-left border-collapse">
+                  <thead className="sticky top-0 bg-gray-50 dark:bg-zinc-900 z-10 shadow-2xs">
+                    <tr className="border-b border-gray-100 dark:border-zinc-800 text-[11px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-wider select-none">
+                      <th className="py-3 px-5 min-w-[260px]">Target</th>
+                      <th className="py-3 px-4 text-center min-w-[120px]">Overall SOV</th>
+                      <th className="py-3 px-4 min-w-[160px]">Top Engine</th>
+                      <th className="py-3 px-4 min-w-[160px]">Weakest Engine</th>
+                      <th className="py-3 px-5 text-right min-w-[120px]">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 dark:divide-zinc-800/60 text-xs">
+                    {activeTableRows.map((row) => (
+                      <tr key={`modal-row-${row.id}`} className="hover:bg-gray-50/70 dark:hover:bg-zinc-800/40 transition-colors">
+                        <td className="py-4 px-5">
+                          <div className="flex items-center gap-3">
+                            <div className={cn('w-9 h-9 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs', row.faviconBg)}>
+                              {row.faviconText}
+                            </div>
+                            <div>
+                              <div className="font-semibold text-gray-900 dark:text-zinc-100">{row.target}</div>
+                              <div className="text-[11px] text-gray-500">{row.domainUrl}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-4 px-4 text-center">
+                          <div className="inline-flex items-center justify-center">
+                            <div className={cn('w-10 h-10 rounded-full border-2 flex items-center justify-center font-bold text-xs shadow-2xs', row.overallSov >= 50 ? 'border-emerald-500 text-emerald-700 bg-emerald-50' : 'border-blue-500 text-blue-700 bg-blue-50')}>
+                              {row.overallSov}%
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-4 px-4">
+                          <div className="font-semibold text-gray-900 dark:text-zinc-100 flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                            {row.topEngine.name}
+                          </div>
+                          <div className="text-[11px] text-emerald-600 font-medium">{row.topEngine.score}</div>
+                        </td>
+                        <td className="py-4 px-4">
+                          <div className="font-semibold text-gray-900 dark:text-zinc-100 flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                            {row.weakestEngine.name}
+                          </div>
+                          <div className="text-[11px] text-rose-600 font-medium">{row.weakestEngine.score}</div>
+                        </td>
+                        <td className="py-4 px-5 text-right">
+                          <span className={cn('inline-block px-2.5 py-1 rounded-full text-[11px] font-semibold border', row.status.variant === 'critical' ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200')}>
+                            {row.status.label}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </DialogContent>
+          </Dialog>
         </>
       )}
     </div>

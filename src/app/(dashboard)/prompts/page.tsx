@@ -17,6 +17,7 @@ import {
   FileQuestion,
   Check,
   Filter,
+  Maximize2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -78,6 +79,7 @@ export default function PromptsPage() {
   const [isAiModalOpen, setIsAiModalOpen] = React.useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = React.useState(false);
   const [isScheduleModalOpen, setIsScheduleModalOpen] = React.useState(false);
+  const [isTableExpanded, setIsTableExpanded] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   // Audit execution states
@@ -884,11 +886,23 @@ export default function PromptsPage() {
                 Real-time AI search scoring and automatic pillar intent categorization
               </p>
             </div>
-            {selectedPromptIds.length > 0 && (
-              <span className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 border border-blue-200/60 dark:border-blue-800/60">
-                {selectedPromptIds.length} selected
-              </span>
-            )}
+            <div className="flex items-center gap-2">
+              {selectedPromptIds.length > 0 && (
+                <span className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 border border-blue-200/60 dark:border-blue-800/60">
+                  {selectedPromptIds.length} selected
+                </span>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsTableExpanded(true)}
+                title="Expand table"
+                className="h-8.5 px-2.5 text-xs rounded-xl border-gray-200 dark:border-zinc-800 gap-1.5 cursor-pointer text-gray-700 dark:text-zinc-300"
+              >
+                <Maximize2 className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Expand</span>
+              </Button>
+            </div>
           </div>
 
           {/* Responsive Table matching requested design (Checkbox, Prompt/Query, Pillar, Intent, Type, Avg, Active, Actions) */}
@@ -1382,6 +1396,141 @@ export default function PromptsPage() {
         isOpen={isScheduleModalOpen}
         onOpenChange={setIsScheduleModalOpen}
       />
+
+      {/* ========================================================================= */}
+      {/* Modal 5: Full-Screen Expanded Prompt Library Modal */}
+      {/* ========================================================================= */}
+      <Dialog open={isTableExpanded} onOpenChange={setIsTableExpanded}>
+        <DialogContent className="max-w-6xl p-6 bg-white dark:bg-zinc-900 border-gray-200 dark:border-zinc-800 shadow-2xl rounded-2xl max-h-[90vh] flex flex-col">
+          <DialogHeader className="pb-3 border-b border-gray-100 dark:border-zinc-800 shrink-0">
+            <div className="flex items-center justify-between pr-6">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400">
+                  <FileQuestion className="w-5 h-5" />
+                </div>
+                <div>
+                  <DialogTitle className="text-lg font-bold text-gray-900 dark:text-white">
+                    Prompt Library (Expanded View)
+                  </DialogTitle>
+                  <DialogDescription className="text-xs text-gray-500 dark:text-zinc-400">
+                    Comprehensive dataset view — {filteredPrompts.length} prompts matching filters
+                  </DialogDescription>
+                </div>
+              </div>
+            </div>
+          </DialogHeader>
+
+          {/* Quick Filter Bar inside Modal */}
+          <div className="py-3 flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 dark:border-zinc-800 shrink-0">
+            <div className="relative w-72">
+              <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search prompts..."
+                className="w-full pl-9 pr-3 py-1.5 text-xs rounded-xl border border-gray-200 dark:border-zinc-800 bg-gray-50/50 dark:bg-zinc-800/50 text-gray-900 dark:text-zinc-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+              />
+            </div>
+
+            <div className="flex items-center gap-1.5 overflow-x-auto">
+              {(['ALL', 'GEO', 'AEO', 'AIO'] as const).map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => setSelectedPillar(p)}
+                  className={cn(
+                    'px-2.5 py-1 rounded-lg text-xs font-medium transition-all shrink-0 cursor-pointer select-none',
+                    selectedPillar === p
+                      ? 'bg-blue-600 text-white shadow-2xs font-semibold'
+                      : 'text-gray-600 dark:text-zinc-400 hover:bg-gray-100 dark:hover:bg-zinc-800'
+                  )}
+                >
+                  {p === 'ALL' ? 'All Pillars' : p}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Scrollable Table View */}
+          <div className="overflow-auto flex-1 min-h-0 pt-2">
+            <table className="w-full text-left border-collapse">
+              <thead className="sticky top-0 bg-gray-50 dark:bg-zinc-900 z-10 shadow-2xs">
+                <tr className="border-b border-gray-100 dark:border-zinc-800 text-[11px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-wider select-none">
+                  <th className="py-3 px-5 min-w-[300px]">Prompt / Query</th>
+                  <th className="py-3 px-4">Pillar</th>
+                  <th className="py-3 px-4">Search Intent</th>
+                  <th className="py-3 px-4">Type</th>
+                  <th className="py-3 px-4 text-center">Avg Visibility</th>
+                  <th className="py-3 px-4 text-center">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 dark:divide-zinc-800/60 text-xs">
+                {filteredPrompts.map((prompt) => (
+                  <tr key={`modal-prompt-${prompt.id}`} className="hover:bg-gray-50/70 dark:hover:bg-zinc-800/40 transition-colors">
+                    <td className="py-3.5 px-5">
+                      <div className="font-semibold text-gray-900 dark:text-zinc-100">
+                        {prompt.query}
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4 whitespace-nowrap">
+                      <span
+                        className={cn(
+                          'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border',
+                          prompt.pillar === 'GEO' &&
+                            'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-400 border-blue-200/60 dark:border-blue-800/60',
+                          prompt.pillar === 'AEO' &&
+                            'bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-400 border-purple-200/60 dark:border-purple-800/60',
+                          prompt.pillar === 'AIO' &&
+                            'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border-emerald-200/60 dark:border-emerald-800/60'
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            'w-1.5 h-1.5 rounded-full inline-block',
+                            prompt.pillar === 'GEO' && 'bg-blue-500',
+                            prompt.pillar === 'AEO' && 'bg-purple-500',
+                            prompt.pillar === 'AIO' && 'bg-emerald-500'
+                          )}
+                        />
+                        {prompt.pillar}
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-4 whitespace-nowrap">
+                      <span
+                        className={cn(
+                          'inline-block px-2.5 py-0.5 rounded-full text-[11px] font-medium border',
+                          prompt.intent === 'Informational' &&
+                            'bg-blue-50/70 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border-blue-200/70 dark:border-blue-800/60',
+                          prompt.intent === 'Commercial' &&
+                            'bg-amber-50/70 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200/70 dark:border-amber-800/60',
+                          prompt.intent === 'Transactional' &&
+                            'bg-emerald-50/70 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200/70 dark:border-emerald-800/60',
+                          prompt.intent === 'Navigational' &&
+                            'bg-purple-50/70 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border-purple-200/70 dark:border-purple-800/60'
+                        )}
+                      >
+                        {prompt.intent}
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-4 whitespace-nowrap">
+                      <span className="font-medium text-gray-700 dark:text-zinc-300">{prompt.type}</span>
+                    </td>
+                    <td className="py-3.5 px-4 text-center font-bold font-mono text-gray-900 dark:text-white">
+                      {prompt.avg_score !== null && prompt.avg_score !== undefined ? `${prompt.avg_score}%` : '—'}
+                    </td>
+                    <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                      <span className={cn('px-2 py-0.5 rounded-full text-[11px] font-semibold', prompt.is_active ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-gray-100 text-gray-500')}>
+                        {prompt.is_active ? 'Active' : 'Paused'}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
