@@ -5,13 +5,15 @@ import {
   ResponsiveContainer,
   BarChart,
   Bar,
+  PieChart,
+  Pie,
   XAxis,
   YAxis,
   Tooltip,
   Cell,
   CartesianGrid,
 } from 'recharts';
-import { BarChart3, Layers, Globe, ArrowUpRight } from 'lucide-react';
+import { BarChart3, PieChart as PieChartIcon, Layers, Globe, ArrowUpRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { SourceDomain, CitationCategoryBreakdown } from '@/types/domains';
 
@@ -76,7 +78,9 @@ export function DomainCharts({
     }));
   }, [topDomains]);
 
-  const maxCitations = Math.max(...categoryBreakdown.map((c) => c.citationsCount), 1);
+  const totalCategoryCitations = React.useMemo(() => {
+    return categoryBreakdown.reduce((acc, c) => acc + c.citationsCount, 0);
+  }, [categoryBreakdown]);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
@@ -169,12 +173,12 @@ export function DomainCharts({
         </div>
       </div>
 
-      {/* 2. Right: By Category (List / Horizontal Progress Bars) - 1 Column */}
+      {/* 2. Right: By Category (Donut Chart) - 1 Column */}
       <div className="p-5 rounded-2xl border border-gray-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-2xs flex flex-col justify-between">
         <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-zinc-800/80">
           <div className="flex items-center gap-2">
             <div className="p-1.5 rounded-lg bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400">
-              <Layers className="w-4 h-4" />
+              <PieChartIcon className="w-4 h-4" />
             </div>
             <h2 className="text-sm font-bold text-gray-900 dark:text-white">
               Citations by Category
@@ -183,44 +187,86 @@ export function DomainCharts({
           <span className="text-[11px] text-gray-400 font-medium">Domain Types</span>
         </div>
 
-        {/* Categories Progress Bars List */}
-        <div className="space-y-4 my-auto py-2">
-          {categoryBreakdown.map((cat, idx) => {
-            const relativeWidth = Math.round((cat.citationsCount / maxCitations) * 100);
+        {/* Donut Chart with Center Metric Label */}
+        <div className="relative h-44 w-full flex items-center justify-center my-1">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Tooltip
+                content={({ active, payload }) => {
+                  if (active && payload && payload.length) {
+                    const data = payload[0].payload as CitationCategoryBreakdown;
+                    return (
+                      <div className="p-2.5 rounded-xl bg-gray-900/95 dark:bg-zinc-950/95 text-white text-xs shadow-xl border border-gray-800 space-y-1">
+                        <div className="flex items-center gap-1.5 font-bold">
+                          <span
+                            className="w-2 h-2 rounded-full"
+                            style={{ backgroundColor: data.color }}
+                          />
+                          <span>{data.category}</span>
+                        </div>
+                        <div className="text-[11px] text-gray-300 flex items-center justify-between gap-3 pt-1 border-t border-gray-800 font-mono">
+                          <span>{data.citationsCount} citations</span>
+                          <span className="font-bold text-white">{data.percentage}%</span>
+                        </div>
+                      </div>
+                    );
+                  }
+                  return null;
+                }}
+              />
+              <Pie
+                data={categoryBreakdown}
+                dataKey="citationsCount"
+                nameKey="category"
+                cx="50%"
+                cy="50%"
+                innerRadius={48}
+                outerRadius={68}
+                paddingAngle={3}
+                stroke="#ffffff"
+                strokeWidth={2}
+                className="dark:stroke-zinc-900"
+              >
+                {categoryBreakdown.map((entry, index) => (
+                  <Cell key={`cat-cell-${index}`} fill={entry.color} />
+                ))}
+              </Pie>
+            </PieChart>
+          </ResponsiveContainer>
 
-            return (
-              <div key={idx} className="space-y-1.5">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-semibold text-gray-800 dark:text-zinc-200 flex items-center gap-1.5">
-                    <span
-                      className="w-2 h-2 rounded-full shrink-0"
-                      style={{ backgroundColor: cat.color }}
-                    />
-                    <span>{cat.category}</span>
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-gray-500 dark:text-zinc-400 text-[11px] font-mono">
-                      {cat.citationsCount} cites
-                    </span>
-                    <span className="font-bold text-gray-900 dark:text-white font-mono text-[11px] w-8 text-right">
-                      {cat.percentage}%
-                    </span>
-                  </div>
-                </div>
-
-                {/* Thin Colored Horizontal Progress Bar */}
-                <div className="w-full h-1.5 bg-gray-100 dark:bg-zinc-800 rounded-full overflow-hidden">
-                  <div
-                    className={cn('h-full rounded-full transition-all duration-500', cat.barColor)}
-                    style={{ width: `${relativeWidth}%` }}
-                  />
-                </div>
-              </div>
-            );
-          })}
+          {/* Central Donut Stat */}
+          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none">
+            <span className="text-base font-extrabold text-gray-900 dark:text-white font-mono leading-none">
+              {totalCategoryCitations}
+            </span>
+            <span className="text-[10px] uppercase font-bold text-gray-400 dark:text-zinc-500 tracking-wider mt-0.5">
+              Citations
+            </span>
+          </div>
         </div>
 
-        <div className="pt-3 border-t border-gray-100 dark:border-zinc-800/80 flex items-center justify-between text-[11px] text-gray-500">
+        {/* Categories Compact Legend */}
+        <div className="space-y-1.5 pt-2 border-t border-gray-100 dark:border-zinc-800/80">
+          {categoryBreakdown.map((cat, idx) => (
+            <div key={idx} className="flex items-center justify-between text-xs py-0.5">
+              <span className="font-medium text-gray-700 dark:text-zinc-300 flex items-center gap-2 truncate">
+                <span
+                  className="w-2 h-2 rounded-full shrink-0"
+                  style={{ backgroundColor: cat.color }}
+                />
+                <span className="truncate">{cat.category}</span>
+              </span>
+              <div className="flex items-center gap-2 shrink-0 font-mono text-[11px]">
+                <span className="text-gray-400 dark:text-zinc-500">{cat.citationsCount}</span>
+                <span className="font-bold text-gray-900 dark:text-zinc-100 w-8 text-right">
+                  {cat.percentage}%
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="pt-2.5 mt-2 border-t border-gray-100 dark:border-zinc-800/80 flex items-center justify-between text-[11px] text-gray-500">
           <span>{categoryBreakdown.length} Tracked Categories</span>
           <span className="font-semibold text-blue-600 dark:text-blue-400">100% Total Volume</span>
         </div>
