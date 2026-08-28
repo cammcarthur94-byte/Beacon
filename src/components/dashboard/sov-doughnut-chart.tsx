@@ -9,8 +9,7 @@ import {
   Tooltip,
 } from 'recharts';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { Users, TrendingUp, ShieldCheck } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Users, TrendingUp } from 'lucide-react';
 
 interface SovDoughnutChartProps {
   userSov?: number; // e.g. 42
@@ -25,29 +24,35 @@ interface SovDoughnutChartProps {
 
 export function SovDoughnutChart({
   userSov = 42,
-  competitorSov = 58,
   competitorBreakdown = [
-    { name: 'Competitor Alpha (Omni)', share: 26, color: '#64748b' },
-    { name: 'Competitor Beta (Nexus)', share: 18, color: '#94a3b8' },
-    { name: 'Competitor Gamma (Apex)', share: 14, color: '#cbd5e1' },
+    { name: 'Competitor Alpha (Omni)', share: 26, color: '#8b5cf6' },
+    { name: 'Competitor Beta (Nexus)', share: 18, color: '#06b6d4' },
+    { name: 'Competitor Gamma (Apex)', share: 14, color: '#f59e0b' },
   ],
   brandName = 'Acme Sync (You)',
 }: SovDoughnutChartProps) {
-  const chartData = [
-    { name: brandName, value: userSov, color: '#3b82f6' },
-    { name: 'Competitors Combined', value: competitorSov, color: '#64748b' },
-  ];
+  // Build chart data with User + each individual competitor as distinct slices
+  const chartData = React.useMemo(() => {
+    const userSlice = { name: brandName, value: userSov, color: '#3b82f6', isUser: true };
+    const compSlices = competitorBreakdown.map((c) => ({
+      name: c.name,
+      value: c.share,
+      color: c.color,
+      isUser: false,
+    }));
+    return [userSlice, ...compSlices];
+  }, [brandName, userSov, competitorBreakdown]);
 
   const CustomPieTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       const item = payload[0];
       return (
-        <div className="rounded-xl border border-gray-200/80 dark:border-zinc-800 bg-white/95 dark:bg-zinc-900/95 p-3 shadow-xl backdrop-blur-md text-xs space-y-1 min-w-[170px]">
+        <div className="rounded-xl border border-gray-200/80 dark:border-zinc-800 bg-white/95 dark:bg-zinc-900/95 p-3 shadow-xl backdrop-blur-md text-xs space-y-1 min-w-[190px]">
           <div className="flex items-center gap-1.5 font-semibold text-gray-900 dark:text-zinc-100">
-            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: item.payload.color }} />
-            <span>{item.name}</span>
+            <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: item.payload.color }} />
+            <span className="truncate">{item.name}</span>
           </div>
-          <div className="text-gray-500 dark:text-zinc-400 flex items-center justify-between">
+          <div className="text-gray-500 dark:text-zinc-400 flex items-center justify-between pt-0.5">
             <span>Share of Voice:</span>
             <span className="font-bold text-gray-900 dark:text-zinc-100 font-mono">{item.value}%</span>
           </div>
@@ -86,7 +91,7 @@ export function SovDoughnutChart({
                 cy="50%"
                 innerRadius={65}
                 outerRadius={88}
-                paddingAngle={3}
+                paddingAngle={2.5}
                 dataKey="value"
                 stroke="none"
               >
@@ -108,23 +113,30 @@ export function SovDoughnutChart({
           </div>
         </div>
 
-        {/* Legend & Breakdown Segment summary */}
-        <div className="space-y-2 pt-1 border-t border-gray-100 dark:border-zinc-800">
-          <div className="flex items-center justify-between text-xs p-2 rounded-lg bg-blue-50/60 dark:bg-blue-950/40 border border-blue-200/50 dark:border-blue-800/50">
-            <div className="flex items-center gap-2">
+        {/* Legend & Breakdown Segment list for User + all Competitors */}
+        <div className="space-y-1.5 pt-1 border-t border-gray-100 dark:border-zinc-800">
+          {/* User Row */}
+          <div className="flex items-center justify-between text-xs p-2 rounded-lg bg-blue-50/70 dark:bg-blue-950/40 border border-blue-200/60 dark:border-blue-800/60">
+            <div className="flex items-center gap-2 min-w-0">
               <span className="w-2.5 h-2.5 rounded-full bg-blue-600 shrink-0" />
-              <span className="font-semibold text-gray-900 dark:text-zinc-100">{brandName}</span>
+              <span className="font-semibold text-gray-900 dark:text-zinc-100 truncate">{brandName}</span>
             </div>
-            <span className="font-bold text-blue-700 dark:text-blue-300 font-mono text-xs">{userSov}% SOV</span>
+            <span className="font-bold text-blue-700 dark:text-blue-300 font-mono text-xs shrink-0 pl-2">{userSov}% SOV</span>
           </div>
 
-          <div className="flex items-center justify-between text-xs p-2 rounded-lg bg-gray-50/80 dark:bg-zinc-800/50 border border-gray-200/50 dark:border-zinc-700/50">
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-slate-500 shrink-0" />
-              <span className="font-medium text-gray-700 dark:text-zinc-300">All Competitors Combined</span>
+          {/* All Individual Competitors */}
+          {competitorBreakdown.map((comp) => (
+            <div
+              key={comp.name}
+              className="flex items-center justify-between text-xs p-1.5 px-2 rounded-lg bg-gray-50/80 dark:bg-zinc-800/50 border border-gray-200/50 dark:border-zinc-700/50"
+            >
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: comp.color }} />
+                <span className="font-medium text-gray-700 dark:text-zinc-300 truncate">{comp.name}</span>
+              </div>
+              <span className="font-semibold text-gray-900 dark:text-zinc-100 font-mono text-xs shrink-0 pl-2">{comp.share}% SOV</span>
             </div>
-            <span className="font-semibold text-gray-900 dark:text-zinc-100 font-mono text-xs">{competitorSov}% SOV</span>
-          </div>
+          ))}
         </div>
 
         {/* Subtle Description Subtext */}
@@ -138,3 +150,4 @@ export function SovDoughnutChart({
     </Card>
   );
 }
+

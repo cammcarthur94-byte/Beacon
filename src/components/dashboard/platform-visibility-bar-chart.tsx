@@ -37,7 +37,16 @@ const DEFAULT_PLATFORMS: PlatformScore[] = [
 export function PlatformVisibilityBarChart({
   data = DEFAULT_PLATFORMS,
 }: PlatformVisibilityBarChartProps) {
-  const chartData = data && data.length > 0 ? data : DEFAULT_PLATFORMS;
+  // Sort platforms from highest to lowest score
+  const chartData = React.useMemo(() => {
+    const raw = data && data.length > 0 ? data : DEFAULT_PLATFORMS;
+    return [...raw].sort((a, b) => b.score - a.score);
+  }, [data]);
+
+  const topPlatform = chartData[0] || { name: 'Perplexity', score: 92 };
+  const avgScore = chartData.length > 0
+    ? (chartData.reduce((acc, curr) => acc + curr.score, 0) / chartData.length).toFixed(1)
+    : '80.0';
 
   const CustomBarTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
@@ -123,13 +132,13 @@ export function PlatformVisibilityBarChart({
           <div className="p-2 rounded-lg bg-gray-50/80 dark:bg-zinc-800/50 border border-gray-200/50 dark:border-zinc-700/50">
             <div className="text-[10px] text-gray-500 dark:text-zinc-400 uppercase tracking-wider font-semibold">Top Performing</div>
             <div className="text-xs font-bold text-cyan-600 dark:text-cyan-400 mt-0.5">
-              Perplexity (92/100)
+              {topPlatform.name} ({topPlatform.score}/100)
             </div>
           </div>
           <div className="p-2 rounded-lg bg-gray-50/80 dark:bg-zinc-800/50 border border-gray-200/50 dark:border-zinc-700/50">
             <div className="text-[10px] text-gray-500 dark:text-zinc-400 uppercase tracking-wider font-semibold">Average Index</div>
             <div className="text-xs font-bold text-gray-900 dark:text-zinc-100 mt-0.5 font-mono">
-              80.2 / 100
+              {avgScore} / 100
             </div>
           </div>
         </div>
@@ -137,9 +146,10 @@ export function PlatformVisibilityBarChart({
         {/* Subtle Description Subtext */}
         <div className="text-[11px] text-gray-500 dark:text-zinc-400 flex items-center justify-between pt-1">
           <span>Benchmarked across active engines</span>
-          <span className="font-medium text-blue-600 dark:text-blue-400">5 Models Connected</span>
+          <span className="font-medium text-blue-600 dark:text-blue-400">{chartData.length} Models Connected</span>
         </div>
       </CardContent>
     </Card>
   );
 }
+

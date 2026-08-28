@@ -230,27 +230,8 @@ export function Sidebar() {
         </div>
       </div>
 
-      {/* Footer Area: Usage Meter & User Profile */}
-      <div className="p-3 border-t border-gray-200/60 dark:border-zinc-800/60 space-y-2.5 shrink-0">
-        {/* Usage Meter */}
-        <div className="p-2.5 rounded-xl bg-white dark:bg-zinc-900 border border-gray-200/80 dark:border-zinc-800 shadow-2xs space-y-1.5">
-          <div className="flex items-center justify-between text-[11px]">
-            <span className="font-semibold text-gray-700 dark:text-zinc-300 flex items-center gap-1">
-              <HardDrive className="w-3 h-3 text-blue-600 dark:text-blue-400" />
-              Usage Meter
-            </span>
-            <span className="font-mono text-[10px] text-gray-500 dark:text-zinc-400">74% / 10k</span>
-          </div>
-          <div className="w-full h-1.5 bg-gray-100 dark:bg-zinc-800 rounded-full overflow-hidden">
-            <div className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full w-[74%]" />
-          </div>
-          <div className="flex items-center justify-between text-[10px] text-gray-400 dark:text-zinc-500">
-            <span>7,420 queries</span>
-            <span className="text-blue-600 dark:text-blue-400 hover:underline cursor-pointer">Upgrade</span>
-          </div>
-        </div>
-
-        {/* User Profile Avatar */}
+      {/* Footer Area: User Profile */}
+      <div className="p-3 border-t border-gray-200/60 dark:border-zinc-800/60 shrink-0">
         <div className="flex items-center justify-between p-2 rounded-xl bg-white dark:bg-zinc-900 border border-gray-200/80 dark:border-zinc-800 shadow-2xs">
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="w-7 h-7 rounded-full bg-gray-900 dark:bg-zinc-100 text-white dark:text-zinc-900 flex items-center justify-center font-semibold text-xs shrink-0">
@@ -270,4 +251,5 @@ export function Sidebar() {
     </aside>
   );
 }
+
 

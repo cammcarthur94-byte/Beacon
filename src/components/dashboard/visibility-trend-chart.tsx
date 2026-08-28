@@ -234,19 +234,19 @@ export function VisibilityTrendChart({
             <AreaChart data={chartData} margin={{ top: 10, right: 15, left: -20, bottom: 0 }}>
               <defs>
                 <linearGradient id="visibilityGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.25} />
+                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.12} />
                   <stop offset="95%" stopColor="#10b981" stopOpacity={0.0} />
                 </linearGradient>
                 <linearGradient id="sovGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.25} />
+                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.12} />
                   <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.0} />
                 </linearGradient>
                 <linearGradient id="mentionsGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.2} />
+                  <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.10} />
                   <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.0} />
                 </linearGradient>
                 <linearGradient id="sentimentGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.2} />
+                  <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.10} />
                   <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.0} />
                 </linearGradient>
               </defs>
@@ -280,7 +280,7 @@ export function VisibilityTrendChart({
                   strokeWidth={2.5}
                   fillOpacity={1}
                   fill="url(#visibilityGrad)"
-                  activeDot={{ r: 5, fill: '#10b981' }}
+                  activeDot={{ r: 5, fill: '#10b981', stroke: '#ffffff', strokeWidth: 2 }}
                 />
               )}
 
@@ -294,7 +294,7 @@ export function VisibilityTrendChart({
                   strokeWidth={2.5}
                   fillOpacity={1}
                   fill="url(#sovGrad)"
-                  activeDot={{ r: 5, fill: '#3b82f6' }}
+                  activeDot={{ r: 5, fill: '#3b82f6', stroke: '#ffffff', strokeWidth: 2 }}
                 />
               )}
 
@@ -305,10 +305,10 @@ export function VisibilityTrendChart({
                   dataKey="mentions"
                   name="AI Mentions"
                   stroke="#8b5cf6"
-                  strokeWidth={2}
+                  strokeWidth={2.5}
                   fillOpacity={1}
                   fill="url(#mentionsGrad)"
-                  activeDot={{ r: 5, fill: '#8b5cf6' }}
+                  activeDot={{ r: 5, fill: '#8b5cf6', stroke: '#ffffff', strokeWidth: 2 }}
                 />
               )}
 
@@ -319,10 +319,10 @@ export function VisibilityTrendChart({
                   dataKey="sentiment"
                   name="Sentiment"
                   stroke="#f59e0b"
-                  strokeWidth={2}
+                  strokeWidth={2.5}
                   fillOpacity={1}
                   fill="url(#sentimentGrad)"
-                  activeDot={{ r: 5, fill: '#f59e0b' }}
+                  activeDot={{ r: 5, fill: '#f59e0b', stroke: '#ffffff', strokeWidth: 2 }}
                 />
               )}
             </AreaChart>
@@ -332,4 +332,5 @@ export function VisibilityTrendChart({
     </Card>
   );
 }
+
 

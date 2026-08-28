@@ -6,9 +6,7 @@ import {
   Sparkles,
   TrendingUp,
   TrendingDown,
-  Search,
   RotateCw,
-  ArrowRight,
   ShieldCheck,
   Globe,
   Users,
@@ -23,6 +21,7 @@ import {
   Heart,
   BarChart3,
 } from 'lucide-react';
+
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { getDashboardMetrics, DashboardMetrics } from '@/lib/actions/dashboard';
@@ -96,11 +95,6 @@ export default function DashboardPage() {
   ]);
   const [viewState, setViewState] = React.useState<ViewState>('domain');
 
-  // Quick Audit State
-  const [auditQuery, setAuditQuery] = React.useState('');
-  const [isAuditing, setIsAuditing] = React.useState(false);
-  const [auditFeedback, setAuditFeedback] = React.useState<string | null>(null);
-
   // Load metrics from Supabase
   const loadDashboardData = React.useCallback(async () => {
     try {
@@ -129,30 +123,6 @@ export default function DashboardPage() {
     });
   };
 
-  // Quick Audit Handler
-  const handleRunAudit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!auditQuery.trim()) return;
-
-    setIsAuditing(true);
-    setAuditFeedback(null);
-
-    try {
-      await fetch('/api/audit/trigger', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      }).catch(() => {});
-
-      setAuditFeedback(`Audit started across ${activeEngines.length} selected engines!`);
-      setAuditQuery('');
-      await loadDashboardData();
-      setTimeout(() => setAuditFeedback(null), 4000);
-    } catch {
-      setAuditFeedback('Audit triggered successfully.');
-    } finally {
-      setIsAuditing(false);
-    }
-  };
 
   // =========================================================================
   // DYNAMIC COMPUTATIONS & GLOBAL FILTER REACTIVITY
@@ -525,7 +495,6 @@ export default function DashboardPage() {
             {/* Left Chart: AI Share of Voice (User vs. Competitors) Doughnut */}
             <SovDoughnutChart
               userSov={dynamicSov}
-              competitorSov={competitorSov}
               competitorBreakdown={competitorBreakdown}
               brandName="Acme Sync (You)"
             />
@@ -534,59 +503,6 @@ export default function DashboardPage() {
             <PlatformVisibilityBarChart
               data={dynamicPlatformScores}
             />
-          </div>
-
-          {/* ===================================================================== */}
-          {/* Quick Audit Action Bar */}
-          {/* ===================================================================== */}
-          <div className="rounded-xl border border-gray-200/80 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-900/60 p-4 md:p-5 shadow-2xs space-y-2.5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-md bg-blue-100 dark:bg-blue-950 text-blue-600 dark:text-blue-400 flex items-center justify-center">
-                  <Sparkles className="w-3.5 h-3.5" />
-                </div>
-                <span className="text-xs md:text-sm font-semibold text-gray-900 dark:text-zinc-100">
-                  Quick AI Citation Audit
-                </span>
-              </div>
-
-              {auditFeedback && (
-                <span className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold animate-in fade-in">
-                  {auditFeedback}
-                </span>
-              )}
-            </div>
-
-            <form onSubmit={handleRunAudit} className="flex flex-col sm:flex-row items-center gap-2.5">
-              <div className="relative flex-1 w-full">
-                <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  value={auditQuery}
-                  onChange={(e) => setAuditQuery(e.target.value)}
-                  placeholder="Enter a URL or prompt cluster to audit..."
-                  className="w-full h-11 pl-10 pr-4 rounded-xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs md:text-sm text-gray-900 dark:text-zinc-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-2xs"
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={isAuditing || !auditQuery.trim()}
-                className="w-full sm:w-auto h-11 px-5 rounded-xl bg-gray-900 hover:bg-black dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-zinc-900 font-medium text-xs md:text-sm flex items-center justify-center gap-2 shrink-0 transition-all shadow-2xs disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-              >
-                {isAuditing ? (
-                  <>
-                    <RotateCw className="w-3.5 h-3.5 animate-spin" />
-                    <span>Auditing...</span>
-                  </>
-                ) : (
-                  <>
-                    <span>Run Audit Now</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </>
-                )}
-              </button>
-            </form>
           </div>
 
           {/* ===================================================================== */}
