@@ -8,17 +8,13 @@ import {
   FileSearch,
   History,
   Users,
-  Bell,
   Globe,
   Sparkles,
   Layers,
-  Settings,
   Radio,
   ChevronDown,
   Building2,
   CheckCircle2,
-  HardDrive,
-  BarChart3,
   Sliders,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -58,11 +54,9 @@ const NAV_SECTIONS: NavSection[] = [
     ],
   },
   {
-    title: 'Analytics',
+    title: 'Optimization',
     items: [
-      { name: 'AI Fix Queue', href: '/dashboard/actions', icon: Sparkles, badge: '3' },
-      { name: 'Alerts', href: '/dashboard/alerts', icon: Bell, badge: '2' },
-      { name: 'Analytics', href: '/dashboard/archive', icon: BarChart3 },
+      { name: 'AI Fix Queue', href: '/actions', icon: Sparkles, badge: '3' },
     ],
   },
   {
@@ -73,6 +67,7 @@ const NAV_SECTIONS: NavSection[] = [
     ],
   },
 ];
+
 
 export function Sidebar() {
   const pathname = usePathname();
