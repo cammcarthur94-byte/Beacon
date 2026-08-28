@@ -5,13 +5,6 @@ import {
   Globe,
   Users,
   ShieldCheck,
-  TrendingUp,
-  TrendingDown,
-  ExternalLink,
-  Sparkles,
-  ArrowUpDown,
-  Building2,
-  CheckCircle2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useFilterContext, ALL_ENGINES } from '@/context/filter-context';
