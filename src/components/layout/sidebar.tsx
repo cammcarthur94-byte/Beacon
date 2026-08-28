@@ -16,6 +16,7 @@ import {
   Building2,
   CheckCircle2,
   Sliders,
+  Settings,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getUserBrands, DbBrand } from '@/lib/actions/brands';
@@ -60,10 +61,9 @@ const NAV_SECTIONS: NavSection[] = [
     ],
   },
   {
-    title: 'Platform Settings',
+    title: 'Configuration',
     items: [
-      { name: 'Custom Domains', href: '/settings', icon: Layers },
-      { name: 'Platform Settings', href: '/settings', icon: Sliders },
+      { name: 'Settings', href: '/settings', icon: Settings },
     ],
   },
 ];
