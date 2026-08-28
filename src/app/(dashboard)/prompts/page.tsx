@@ -907,9 +907,9 @@ export default function PromptsPage() {
 
           {/* Responsive Table matching requested design (Checkbox, Prompt/Query, Pillar, Intent, Type, Avg, Active, Actions) */}
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+            <table className="w-full text-left border-collapse table-fixed">
               <thead>
-                <tr className="border-b border-gray-100 dark:border-zinc-800/80 bg-gray-50/50 dark:bg-zinc-900/40 text-[11px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-wider">
+                <tr className="border-b border-gray-100 dark:border-zinc-800/80 bg-gray-50/50 dark:bg-zinc-900/40 text-[11px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-wider select-none">
                   {/* Select All Checkbox */}
                   <th className="py-3.5 px-4 w-10 text-center">
                     <input
@@ -919,13 +919,13 @@ export default function PromptsPage() {
                       className="w-4 h-4 rounded border-gray-300 dark:border-zinc-700 text-blue-600 focus:ring-blue-500 cursor-pointer accent-blue-600"
                     />
                   </th>
-                  <th className="py-3 px-5 min-w-[320px]">Prompt / Query</th>
-                  <th className="py-3 px-4">Technical Pillar</th>
-                  <th className="py-3 px-4">Search Intent</th>
-                  <th className="py-3 px-4">Type</th>
-                  <th className="py-3 px-4 text-center">Avg</th>
-                  <th className="py-3 px-4 text-center">Active</th>
-                  <th className="py-3 px-5 text-right">Actions</th>
+                  <th className="py-3.5 px-5 w-[36%] min-w-[280px]">Prompt / Query</th>
+                  <th className="py-3.5 px-4 w-[14%] min-w-[130px]">Technical Pillar</th>
+                  <th className="py-3.5 px-4 w-[14%] min-w-[130px]">Search Intent</th>
+                  <th className="py-3.5 px-4 w-[10%] min-w-[100px]">Type</th>
+                  <th className="py-3.5 px-4 w-[8%] text-center min-w-[70px]">Avg</th>
+                  <th className="py-3.5 px-4 w-[8%] text-center min-w-[70px]">Active</th>
+                  <th className="py-3.5 px-5 w-[10%] text-right min-w-[90px]">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-zinc-800/60 text-xs">
@@ -1454,15 +1454,15 @@ export default function PromptsPage() {
 
           {/* Scrollable Table View */}
           <div className="overflow-auto flex-1 min-h-0 pt-2">
-            <table className="w-full text-left border-collapse">
+            <table className="w-full text-left border-collapse table-fixed">
               <thead className="sticky top-0 bg-gray-50 dark:bg-zinc-900 z-10 shadow-2xs">
                 <tr className="border-b border-gray-100 dark:border-zinc-800 text-[11px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-wider select-none">
-                  <th className="py-3 px-5 min-w-[300px]">Prompt / Query</th>
-                  <th className="py-3 px-4">Pillar</th>
-                  <th className="py-3 px-4">Search Intent</th>
-                  <th className="py-3 px-4">Type</th>
-                  <th className="py-3 px-4 text-center">Avg Visibility</th>
-                  <th className="py-3 px-4 text-center">Status</th>
+                  <th className="py-3.5 px-6 w-[42%] min-w-[280px]">Prompt / Query</th>
+                  <th className="py-3.5 px-4 w-[14%] min-w-[120px]">Pillar</th>
+                  <th className="py-3.5 px-4 w-[16%] min-w-[130px]">Search Intent</th>
+                  <th className="py-3.5 px-4 w-[12%] min-w-[100px]">Type</th>
+                  <th className="py-3.5 px-4 w-[8%] text-center min-w-[70px]">Avg Visibility</th>
+                  <th className="py-3.5 px-4 w-[8%] text-center min-w-[70px]">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-zinc-800/60 text-xs">

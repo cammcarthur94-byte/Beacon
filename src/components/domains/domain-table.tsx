@@ -167,8 +167,8 @@ export function DomainTable({
   return (
     <div className="rounded-2xl border border-gray-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-2xs overflow-hidden">
       
-      {/* 1. Header Toolbar with Search, Category Pills, and CSV Export */}
-      <div className="p-5 border-b border-gray-100 dark:border-zinc-800/80 flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-gray-50/50 dark:bg-zinc-900/50">
+      {/* 1. Header Title & Actions Bar */}
+      <div className="p-5 border-b border-gray-100 dark:border-zinc-800/80 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gray-50/50 dark:bg-zinc-900/50">
         <div>
           <h2 className="text-base font-bold text-gray-900 dark:text-white">
             All Tracked Source Domains ({processedDomains.length})
@@ -178,7 +178,7 @@ export function DomainTable({
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5">
+        <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap">
           {/* Search Input */}
           <div className="relative w-full sm:w-64">
             <Search className="w-3.5 h-3.5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -191,60 +191,62 @@ export function DomainTable({
             />
           </div>
 
-          {/* Category Filter Pills */}
-          <div className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0">
-            <button
-              type="button"
-              onClick={() => handleCategoryChange('ALL')}
-              className={cn(
-                'px-2.5 py-1 rounded-lg text-xs font-medium transition-all shrink-0 cursor-pointer select-none',
-                selectedCategory === 'ALL'
-                  ? 'bg-gray-900 text-white dark:bg-white dark:text-zinc-900 shadow-2xs'
-                  : 'text-gray-600 dark:text-zinc-400 hover:bg-gray-100 dark:hover:bg-zinc-800'
-              )}
-            >
-              All Types
-            </button>
-            {categories.map((cat) => (
-              <button
-                key={cat}
-                type="button"
-                onClick={() => handleCategoryChange(cat)}
-                className={cn(
-                  'px-2.5 py-1 rounded-lg text-xs font-medium transition-all shrink-0 cursor-pointer select-none',
-                  selectedCategory === cat
-                    ? 'bg-blue-600 text-white shadow-2xs font-semibold'
-                    : 'text-gray-600 dark:text-zinc-400 hover:bg-gray-100 dark:hover:bg-zinc-800'
-                )}
-              >
-                {cat}
-              </button>
-            ))}
-          </div>
-
           {/* Action Buttons: Export CSV & Expand Table */}
-          <div className="flex items-center gap-1.5 shrink-0">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleExportCsv}
-              className="h-8.5 text-xs rounded-xl border-gray-200 dark:border-zinc-800 gap-1.5 cursor-pointer"
-            >
-              <Download className="w-3.5 h-3.5 text-gray-500" />
-              <span>Export CSV</span>
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setIsExpanded(true)}
-              title="Expand table"
-              className="h-8.5 px-2.5 text-xs rounded-xl border-gray-200 dark:border-zinc-800 gap-1.5 cursor-pointer text-gray-700 dark:text-zinc-300"
-            >
-              <Maximize2 className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Expand</span>
-            </Button>
-          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExportCsv}
+            className="h-8.5 text-xs rounded-xl border-gray-200 dark:border-zinc-800 gap-1.5 cursor-pointer shrink-0"
+          >
+            <Download className="w-3.5 h-3.5 text-gray-500" />
+            <span>Export CSV</span>
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsExpanded(true)}
+            title="Expand table"
+            className="h-8.5 px-2.5 text-xs rounded-xl border-gray-200 dark:border-zinc-800 gap-1.5 cursor-pointer text-gray-700 dark:text-zinc-300 shrink-0"
+          >
+            <Maximize2 className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Expand</span>
+          </Button>
         </div>
+      </div>
+
+      {/* 2. Category Filter Bar (Equally Spaced Out) */}
+      <div className="px-5 py-3 border-b border-gray-100 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 flex items-center gap-2 overflow-x-auto">
+        <span className="text-[11px] font-semibold text-gray-400 dark:text-zinc-500 uppercase tracking-wider shrink-0 mr-1">
+          Categories:
+        </span>
+        <button
+          type="button"
+          onClick={() => handleCategoryChange('ALL')}
+          className={cn(
+            'px-3 py-1.5 rounded-xl text-xs font-medium transition-all shrink-0 cursor-pointer select-none',
+            selectedCategory === 'ALL'
+              ? 'bg-gray-900 text-white dark:bg-white dark:text-zinc-900 shadow-2xs font-semibold'
+              : 'text-gray-600 dark:text-zinc-400 bg-gray-100/70 dark:bg-zinc-800/60 hover:bg-gray-200/80 dark:hover:bg-zinc-800'
+          )}
+        >
+          All Types
+        </button>
+        {categories.map((cat) => (
+          <button
+            key={cat}
+            type="button"
+            onClick={() => handleCategoryChange(cat)}
+            className={cn(
+              'px-3 py-1.5 rounded-xl text-xs font-medium transition-all shrink-0 cursor-pointer select-none',
+              selectedCategory === cat
+                ? 'bg-blue-600 text-white shadow-2xs font-semibold'
+                : 'text-gray-600 dark:text-zinc-400 bg-gray-100/70 dark:bg-zinc-800/60 hover:bg-gray-200/80 dark:hover:bg-zinc-800'
+            )}
+          >
+            {cat}
+          </button>
+        ))}
       </div>
 
       {/* Active Filter Bar (shown if filtered by Category or Domain from charts) */}
@@ -290,16 +292,16 @@ export function DomainTable({
         </div>
       )}
 
-      {/* 2. Responsive Sortable Data Table */}
+      {/* 3. Responsive Sortable Data Table with Equally Spaced Columns */}
       <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse">
+        <table className="w-full text-left border-collapse table-fixed">
           <thead>
             <tr className="border-b border-gray-100 dark:border-zinc-800/80 bg-gray-50/50 dark:bg-zinc-900/40 text-[11px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-wider select-none">
               
-              {/* Domain Header */}
+              {/* Domain Header (34%) */}
               <th
                 onClick={() => handleSort('domain')}
-                className="py-3 px-5 min-w-[240px] cursor-pointer hover:text-gray-700 dark:hover:text-zinc-300 transition-colors"
+                className="py-3.5 px-6 w-[34%] min-w-[240px] cursor-pointer hover:text-gray-700 dark:hover:text-zinc-300 transition-colors"
               >
                 <div className="flex items-center gap-1.5">
                   <span>Domain</span>
@@ -311,10 +313,10 @@ export function DomainTable({
                 </div>
               </th>
 
-              {/* Category Header */}
+              {/* Category Header (20%) */}
               <th
                 onClick={() => handleSort('category')}
-                className="py-3 px-4 cursor-pointer hover:text-gray-700 dark:hover:text-zinc-300 transition-colors"
+                className="py-3.5 px-6 w-[20%] min-w-[150px] cursor-pointer hover:text-gray-700 dark:hover:text-zinc-300 transition-colors"
               >
                 <div className="flex items-center gap-1.5">
                   <span>Category</span>
@@ -326,10 +328,10 @@ export function DomainTable({
                 </div>
               </th>
 
-              {/* Domain Authority Header */}
+              {/* Domain Authority Header (22%) */}
               <th
                 onClick={() => handleSort('domainAuthority')}
-                className="py-3 px-4 min-w-[170px] cursor-pointer hover:text-gray-700 dark:hover:text-zinc-300 transition-colors"
+                className="py-3.5 px-6 w-[22%] min-w-[160px] cursor-pointer hover:text-gray-700 dark:hover:text-zinc-300 transition-colors"
               >
                 <div className="flex items-center gap-1.5">
                   <span>Domain Authority</span>
@@ -341,10 +343,10 @@ export function DomainTable({
                 </div>
               </th>
 
-              {/* Citations Header */}
+              {/* Citations Header (12%) */}
               <th
                 onClick={() => handleSort('totalCitations')}
-                className="py-3 px-4 text-right cursor-pointer hover:text-gray-700 dark:hover:text-zinc-300 transition-colors"
+                className="py-3.5 px-6 w-[12%] min-w-[110px] text-right cursor-pointer hover:text-gray-700 dark:hover:text-zinc-300 transition-colors"
               >
                 <div className="flex items-center justify-end gap-1.5">
                   <span>Citations</span>
@@ -356,10 +358,10 @@ export function DomainTable({
                 </div>
               </th>
 
-              {/* MoM Change Header */}
+              {/* MoM Change Header (12%) */}
               <th
                 onClick={() => handleSort('momChange')}
-                className="py-3 px-5 text-right cursor-pointer hover:text-gray-700 dark:hover:text-zinc-300 transition-colors"
+                className="py-3.5 px-6 w-[12%] min-w-[110px] text-right cursor-pointer hover:text-gray-700 dark:hover:text-zinc-300 transition-colors"
               >
                 <div className="flex items-center justify-end gap-1.5">
                   <span>MoM Change</span>
@@ -376,7 +378,7 @@ export function DomainTable({
           <tbody className="divide-y divide-gray-100 dark:divide-zinc-800/60 text-xs">
             {processedDomains.length === 0 ? (
               <tr>
-                <td colSpan={5} className="py-8 text-center text-gray-400">
+                <td colSpan={5} className="py-12 text-center text-gray-400">
                   No matching source domains found.
                 </td>
               </tr>
@@ -395,7 +397,7 @@ export function DomainTable({
                     className="hover:bg-gray-50/70 dark:hover:bg-zinc-800/40 transition-colors group"
                   >
                     {/* Domain Name + External Link */}
-                    <td className="py-4 px-5">
+                    <td className="py-4 px-6">
                       <div className="flex items-center gap-3">
                         <DomainFavicon
                           domainOrUrl={domain.domain}
@@ -403,16 +405,16 @@ export function DomainTable({
                           className="rounded-lg shadow-2xs shrink-0"
                           fallbackInitial
                         />
-                        <div className="min-w-0">
+                        <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-1.5">
-                            <span className="font-semibold text-gray-900 dark:text-zinc-100">
+                            <span className="font-semibold text-gray-900 dark:text-zinc-100 truncate">
                               {domain.domain}
                             </span>
                             <a
                               href={domain.url}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                              className="text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors shrink-0"
                             >
                               <ExternalLink className="w-3.5 h-3.5 opacity-60 group-hover:opacity-100" />
                             </a>
@@ -425,7 +427,7 @@ export function DomainTable({
                     </td>
 
                     {/* Category Pill Badge */}
-                    <td className="py-4 px-4 whitespace-nowrap">
+                    <td className="py-4 px-6 whitespace-nowrap">
                       <button
                         type="button"
                         onClick={() => handleCategoryChange(domain.category)}
@@ -442,18 +444,18 @@ export function DomainTable({
                     </td>
 
                     {/* Domain Authority Number + Horizontal Visual Bar */}
-                    <td className="py-4 px-4 whitespace-nowrap">
+                    <td className="py-4 px-6 whitespace-nowrap">
                       <div className="flex items-center gap-3">
-                        <span className="font-bold font-mono text-gray-900 dark:text-zinc-100 w-10">
+                        <span className="font-bold font-mono text-gray-900 dark:text-zinc-100 w-11">
                           DA {domain.domainAuthority}
                         </span>
                         <div className="w-20 h-2 bg-gray-100 dark:bg-zinc-800 rounded-full overflow-hidden shrink-0">
                           <div
                             className={cn(
                               'h-full rounded-full transition-all',
-                              domain.domainAuthority >= 85
+                              domain.domainAuthority >= 90
                                 ? 'bg-emerald-500'
-                                : domain.domainAuthority >= 65
+                                : domain.domainAuthority >= 80
                                 ? 'bg-blue-500'
                                 : 'bg-amber-500'
                             )}
@@ -464,24 +466,26 @@ export function DomainTable({
                     </td>
 
                     {/* Citations Count */}
-                    <td className="py-4 px-4 text-right font-bold font-mono text-gray-900 dark:text-white whitespace-nowrap">
-                      {domain.totalCitations.toLocaleString()}
+                    <td className="py-4 px-6 text-right whitespace-nowrap">
+                      <span className="font-mono text-sm font-bold text-gray-900 dark:text-zinc-100">
+                        {domain.totalCitations}
+                      </span>
                     </td>
 
-                    {/* MoM Percentage Change */}
-                    <td className="py-4 px-5 text-right whitespace-nowrap">
+                    {/* MoM Change Badge */}
+                    <td className="py-4 px-6 text-right whitespace-nowrap">
                       <span
                         className={cn(
-                          'inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[11px] font-bold border',
+                          'inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-mono text-[11px] font-bold border',
                           isPositiveMoM
                             ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200/60 dark:border-emerald-800/60'
-                            : 'bg-red-50 dark:bg-red-950/60 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800/60'
+                            : 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border-rose-200/60 dark:border-rose-800/60'
                         )}
                       >
                         {isPositiveMoM ? (
-                          <TrendingUp className="w-3 h-3 text-emerald-600" />
+                          <TrendingUp className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
                         ) : (
-                          <TrendingDown className="w-3 h-3 text-red-600" />
+                          <TrendingDown className="w-3 h-3 text-rose-600 dark:text-rose-400" />
                         )}
                         <span>
                           {isPositiveMoM ? `+${domain.momChange}%` : `${domain.momChange}%`}
@@ -560,34 +564,34 @@ export function DomainTable({
 
           {/* Scrollable Table Area */}
           <div className="overflow-auto flex-1 min-h-0 pt-2">
-            <table className="w-full text-left border-collapse">
+            <table className="w-full text-left border-collapse table-fixed">
               <thead className="sticky top-0 bg-gray-50 dark:bg-zinc-900 z-10 shadow-2xs">
                 <tr className="border-b border-gray-100 dark:border-zinc-800 text-[11px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-wider select-none">
-                  <th onClick={() => handleSort('domain')} className="py-3 px-5 cursor-pointer hover:text-gray-900 dark:hover:text-white">
+                  <th onClick={() => handleSort('domain')} className="py-3.5 px-6 w-[34%] min-w-[240px] cursor-pointer hover:text-gray-900 dark:hover:text-white">
                     <div className="flex items-center gap-1.5">
                       <span>Domain</span>
                       {sortField === 'domain' ? (sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-blue-600" /> : <ArrowDown className="w-3.5 h-3.5 text-blue-600" />) : <ArrowUpDown className="w-3.5 h-3.5 opacity-40" />}
                     </div>
                   </th>
-                  <th onClick={() => handleSort('category')} className="py-3 px-4 cursor-pointer hover:text-gray-900 dark:hover:text-white">
+                  <th onClick={() => handleSort('category')} className="py-3.5 px-6 w-[20%] min-w-[150px] cursor-pointer hover:text-gray-900 dark:hover:text-white">
                     <div className="flex items-center gap-1.5">
                       <span>Category</span>
                       {sortField === 'category' ? (sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-blue-600" /> : <ArrowDown className="w-3.5 h-3.5 text-blue-600" />) : <ArrowUpDown className="w-3.5 h-3.5 opacity-40" />}
                     </div>
                   </th>
-                  <th onClick={() => handleSort('domainAuthority')} className="py-3 px-4 cursor-pointer hover:text-gray-900 dark:hover:text-white">
+                  <th onClick={() => handleSort('domainAuthority')} className="py-3.5 px-6 w-[22%] min-w-[160px] cursor-pointer hover:text-gray-900 dark:hover:text-white">
                     <div className="flex items-center gap-1.5">
                       <span>Domain Authority</span>
                       {sortField === 'domainAuthority' ? (sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-blue-600" /> : <ArrowDown className="w-3.5 h-3.5 text-blue-600" />) : <ArrowUpDown className="w-3.5 h-3.5 opacity-40" />}
                     </div>
                   </th>
-                  <th onClick={() => handleSort('totalCitations')} className="py-3 px-4 text-right cursor-pointer hover:text-gray-900 dark:hover:text-white">
+                  <th onClick={() => handleSort('totalCitations')} className="py-3.5 px-6 w-[12%] min-w-[110px] text-right cursor-pointer hover:text-gray-900 dark:hover:text-white">
                     <div className="flex items-center justify-end gap-1.5">
                       <span>Total Citations</span>
                       {sortField === 'totalCitations' ? (sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-blue-600" /> : <ArrowDown className="w-3.5 h-3.5 text-blue-600" />) : <ArrowUpDown className="w-3.5 h-3.5 opacity-40" />}
                     </div>
                   </th>
-                  <th onClick={() => handleSort('momChange')} className="py-3 px-5 text-right cursor-pointer hover:text-gray-900 dark:hover:text-white">
+                  <th onClick={() => handleSort('momChange')} className="py-3.5 px-6 w-[12%] min-w-[110px] text-right cursor-pointer hover:text-gray-900 dark:hover:text-white">
                     <div className="flex items-center justify-end gap-1.5">
                       <span>MoM Trend</span>
                       {sortField === 'momChange' ? (sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-blue-600" /> : <ArrowDown className="w-3.5 h-3.5 text-blue-600" />) : <ArrowUpDown className="w-3.5 h-3.5 opacity-40" />}
@@ -602,7 +606,7 @@ export function DomainTable({
 
                   return (
                     <tr key={`modal-${domain.id}`} className="hover:bg-gray-50/70 dark:hover:bg-zinc-800/40 transition-colors">
-                      <td className="py-3.5 px-5">
+                      <td className="py-4 px-6">
                         <div className="flex items-center gap-3">
                           <DomainFavicon domainOrUrl={domain.domain} size={28} className="rounded-lg shadow-2xs shrink-0" fallbackInitial />
                           <div className="min-w-0">
@@ -614,12 +618,12 @@ export function DomainTable({
                           </div>
                         </div>
                       </td>
-                      <td className="py-3.5 px-4 whitespace-nowrap">
+                      <td className="py-4 px-6 whitespace-nowrap">
                         <span className={cn('px-2.5 py-1 rounded-full text-[11px] font-semibold border', badge.bg, badge.text, badge.border)}>
                           {domain.category}
                         </span>
                       </td>
-                      <td className="py-3.5 px-4 whitespace-nowrap">
+                      <td className="py-4 px-6 whitespace-nowrap">
                         <div className="flex items-center gap-2">
                           <span className="font-mono font-bold text-gray-900 dark:text-white w-6">{domain.domainAuthority}</span>
                           <div className="w-24 h-2 rounded-full bg-gray-100 dark:bg-zinc-800 overflow-hidden">
@@ -627,10 +631,10 @@ export function DomainTable({
                           </div>
                         </div>
                       </td>
-                      <td className="py-3.5 px-4 text-right font-bold font-mono text-gray-900 dark:text-white whitespace-nowrap">
+                      <td className="py-4 px-6 text-right font-bold font-mono text-gray-900 dark:text-white whitespace-nowrap">
                         {domain.totalCitations.toLocaleString()}
                       </td>
-                      <td className="py-3.5 px-5 text-right whitespace-nowrap">
+                      <td className="py-4 px-6 text-right whitespace-nowrap">
                         <span className={cn('inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[11px] font-bold border', isPositiveMoM ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-red-50 text-red-700 border-red-200')}>
                           {isPositiveMoM ? <TrendingUp className="w-3 h-3 text-emerald-600" /> : <TrendingDown className="w-3 h-3 text-red-600" />}
                           <span>{isPositiveMoM ? `+${domain.momChange}%` : `${domain.momChange}%`}</span>

@@ -606,14 +606,14 @@ export default function DashboardPage() {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
+                <table className="w-full text-left border-collapse table-fixed">
                   <thead>
-                    <tr className="border-b border-gray-100 dark:border-zinc-800/80 bg-gray-50/60 dark:bg-zinc-900/50 text-[11px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-wider">
-                      <th className="py-3 px-5 min-w-[220px]">Target</th>
-                      <th className="py-3 px-4 text-center min-w-[120px]">Overall SOV</th>
-                      <th className="py-3 px-4 min-w-[140px]">Top Engine</th>
-                      <th className="py-3 px-4 min-w-[140px]">Weakest Engine</th>
-                      <th className="py-3 px-5 text-right min-w-[120px]">Status</th>
+                    <tr className="border-b border-gray-100 dark:border-zinc-800/80 bg-gray-50/60 dark:bg-zinc-900/50 text-[11px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-wider select-none">
+                      <th className="py-3.5 px-6 w-[36%] min-w-[240px]">Target</th>
+                      <th className="py-3.5 px-6 w-[16%] text-center min-w-[120px]">Overall SOV</th>
+                      <th className="py-3.5 px-6 w-[20%] min-w-[150px]">Top Engine</th>
+                      <th className="py-3.5 px-6 w-[20%] min-w-[150px]">Weakest Engine</th>
+                      <th className="py-3.5 px-6 w-[8%] text-right min-w-[110px]">Status</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 dark:divide-zinc-800/60 text-xs">
@@ -626,7 +626,7 @@ export default function DashboardPage() {
                           className="hover:bg-gray-50/70 dark:hover:bg-zinc-800/40 transition-colors group cursor-pointer"
                         >
                           {/* Target Column */}
-                          <td className="py-4 px-5">
+                          <td className="py-4 px-6">
                             <div className="flex items-center gap-3">
                               <div
                                 className={cn(
@@ -770,20 +770,20 @@ export default function DashboardPage() {
 
               {/* Scrollable Table Content */}
               <div className="overflow-auto flex-1 min-h-0 pt-2">
-                <table className="w-full text-left border-collapse">
+                <table className="w-full text-left border-collapse table-fixed">
                   <thead className="sticky top-0 bg-gray-50 dark:bg-zinc-900 z-10 shadow-2xs">
                     <tr className="border-b border-gray-100 dark:border-zinc-800 text-[11px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-wider select-none">
-                      <th className="py-3 px-5 min-w-[260px]">Target</th>
-                      <th className="py-3 px-4 text-center min-w-[120px]">Overall SOV</th>
-                      <th className="py-3 px-4 min-w-[160px]">Top Engine</th>
-                      <th className="py-3 px-4 min-w-[160px]">Weakest Engine</th>
-                      <th className="py-3 px-5 text-right min-w-[120px]">Status</th>
+                      <th className="py-3.5 px-6 w-[36%] min-w-[240px]">Target</th>
+                      <th className="py-3.5 px-6 w-[16%] text-center min-w-[120px]">Overall SOV</th>
+                      <th className="py-3.5 px-6 w-[20%] min-w-[150px]">Top Engine</th>
+                      <th className="py-3.5 px-6 w-[20%] min-w-[150px]">Weakest Engine</th>
+                      <th className="py-3.5 px-6 w-[8%] text-right min-w-[110px]">Status</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 dark:divide-zinc-800/60 text-xs">
                     {activeTableRows.map((row) => (
                       <tr key={`modal-row-${row.id}`} className="hover:bg-gray-50/70 dark:hover:bg-zinc-800/40 transition-colors">
-                        <td className="py-4 px-5">
+                        <td className="py-4 px-6">
                           <div className="flex items-center gap-3">
                             <div className={cn('w-9 h-9 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs', row.faviconBg)}>
                               {row.faviconText}
@@ -794,29 +794,23 @@ export default function DashboardPage() {
                             </div>
                           </div>
                         </td>
-                        <td className="py-4 px-4 text-center">
+                        <td className="py-4 px-6 text-center">
                           <div className="inline-flex items-center justify-center">
                             <div className={cn('w-10 h-10 rounded-full border-2 flex items-center justify-center font-bold text-xs shadow-2xs', row.overallSov >= 50 ? 'border-emerald-500 text-emerald-700 bg-emerald-50' : 'border-blue-500 text-blue-700 bg-blue-50')}>
                               {row.overallSov}%
                             </div>
                           </div>
                         </td>
-                        <td className="py-4 px-4">
-                          <div className="font-semibold text-gray-900 dark:text-zinc-100 flex items-center gap-1.5">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                            {row.topEngine.name}
-                          </div>
+                        <td className="py-4 px-6">
+                          <div className="font-semibold text-gray-900 dark:text-zinc-100">{row.topEngine.name}</div>
                           <div className="text-[11px] text-emerald-600 font-medium">{row.topEngine.score}</div>
                         </td>
-                        <td className="py-4 px-4">
-                          <div className="font-semibold text-gray-900 dark:text-zinc-100 flex items-center gap-1.5">
-                            <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
-                            {row.weakestEngine.name}
-                          </div>
-                          <div className="text-[11px] text-rose-600 font-medium">{row.weakestEngine.score}</div>
+                        <td className="py-4 px-6">
+                          <div className="font-medium text-gray-700 dark:text-zinc-300">{row.weakestEngine.name}</div>
+                          <div className="text-[11px] text-gray-500">{row.weakestEngine.score}</div>
                         </td>
-                        <td className="py-4 px-5 text-right">
-                          <span className={cn('inline-block px-2.5 py-1 rounded-full text-[11px] font-semibold border', row.status.variant === 'critical' ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200')}>
+                        <td className="py-4 px-6 text-right">
+                          <span className={cn('inline-block px-2.5 py-1 rounded-full text-[11px] font-semibold border', row.status.variant === 'critical' && 'bg-rose-50 text-rose-700 border-rose-200', row.status.variant === 'warning' && 'bg-amber-50 text-amber-700 border-amber-200', row.status.variant === 'healthy' && 'bg-emerald-50 text-emerald-700 border-emerald-200')}>
                             {row.status.label}
                           </span>
                         </td>
