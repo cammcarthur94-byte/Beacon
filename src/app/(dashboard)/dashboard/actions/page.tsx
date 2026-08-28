@@ -10,7 +10,7 @@ import {
 } from '@/lib/actions/recommendations';
 import { ActionRecommendation, ActionRecommendationIssueType, ActionRecommendationStatus, AIEngine } from '@/types/geo';
 import { EngineBadge } from '@/components/engine-badge';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -23,11 +23,9 @@ import {
   ChevronUp,
   FileCode,
   Zap,
-  TrendingUp,
   RotateCw,
   AlertTriangle,
   Layers,
-  ArrowRight,
   RefreshCw,
   SlidersHorizontal,
   Flame,
