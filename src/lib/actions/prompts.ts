@@ -227,68 +227,81 @@ export async function createPrompt(payload: {
     }
 
     const targetEngines = payload.target_engines || ['ChatGPT', 'Perplexity', 'Gemini', 'Claude', 'Copilot'];
-    let prompt: any = null;
 
-    // Try inserting with target_engines
-    const res1 = await admin
+    // 1. Primary insert with full schema payload
+    const insertPayload = {
+      brand_id: brandId,
+      query: payload.query.trim(),
+      pillar: payload.pillar || 'GEO',
+      intent: payload.intent || 'Informational',
+      type: payload.type || 'Unbranded',
+      target_engines: targetEngines,
+      is_active: true,
+    };
+
+    const { data, error } = await admin
       .from('prompts')
-      .insert({
-        brand_id: brandId,
-        query: payload.query.trim(),
-        pillar: payload.pillar || 'GEO',
-        intent: payload.intent || 'Informational',
-        type: payload.type || 'Unbranded',
-        target_engines: targetEngines,
-        is_active: true,
-      })
+      .insert([insertPayload])
       .select()
-      .maybeSingle();
+      .single();
 
-    if (res1.error) {
-      // Fallback: insert without target_engines if column not yet migrated
-      console.warn('[createPrompt] target_engines insert fallback:', res1.error.message);
-      const res2 = await admin
-        .from('prompts')
-        .insert({
+    if (error) {
+      console.error('Supabase Insert Error:', error);
+
+      // If target_engines column is not yet present in user's Supabase schema, attempt fallback
+      if (error.message && (error.message.includes('target_engines') || error.code === '42703')) {
+        console.warn('[createPrompt] Retrying insert without target_engines column...');
+        const fallbackPayload = {
           brand_id: brandId,
           query: payload.query.trim(),
           pillar: payload.pillar || 'GEO',
           intent: payload.intent || 'Informational',
           type: payload.type || 'Unbranded',
           is_active: true,
-        })
-        .select()
-        .maybeSingle();
+        };
+        const { data: fallbackData, error: fallbackErr } = await admin
+          .from('prompts')
+          .insert([fallbackPayload])
+          .select()
+          .single();
 
-      if (res2.error) throw res2.error;
-      prompt = res2.data;
-    } else {
-      prompt = res1.data;
-    }
+        if (fallbackErr) {
+          console.error('Supabase Insert Fallback Error:', fallbackErr);
+          throw new Error(`Supabase Insert Error: ${fallbackErr.message} (Code: ${fallbackErr.code})`);
+        }
 
-    if (!prompt) {
-      prompt = {
-        id: `p-${Date.now()}`,
-        brand_id: brandId,
-        query: payload.query.trim(),
-        pillar: payload.pillar || 'GEO',
-        intent: payload.intent || 'Informational',
-        type: payload.type || 'Unbranded',
-        is_active: true,
-        created_at: new Date().toISOString(),
-      };
+        const formattedPrompt: DbPrompt = {
+          id: fallbackData.id,
+          brand_id: fallbackData.brand_id,
+          query: fallbackData.query,
+          pillar: (fallbackData.pillar as any) || 'GEO',
+          intent: (fallbackData.intent as any) || 'Informational',
+          type: (fallbackData.type as any) || 'Unbranded',
+          target_engines: targetEngines,
+          is_active: fallbackData.is_active ?? true,
+          created_at: fallbackData.created_at || new Date().toISOString(),
+          runs_count: 0,
+          avg_score: null,
+        };
+
+        revalidatePath('/prompts');
+        revalidatePath('/dashboard');
+        return { success: true, data: formattedPrompt };
+      }
+
+      throw new Error(`Supabase Insert Error: ${error.message} (Code: ${error.code})`);
     }
 
     const formattedPrompt: DbPrompt = {
-      id: prompt.id,
-      brand_id: prompt.brand_id,
-      query: prompt.query,
-      pillar: (prompt.pillar as any) || 'GEO',
-      intent: (prompt.intent as any) || 'Informational',
-      type: (prompt.type as any) || 'Unbranded',
-      target_engines: prompt.target_engines || targetEngines,
-      is_active: prompt.is_active ?? true,
-      created_at: prompt.created_at || new Date().toISOString(),
+      id: data.id,
+      brand_id: data.brand_id,
+      query: data.query,
+      pillar: (data.pillar as any) || 'GEO',
+      intent: (data.intent as any) || 'Informational',
+      type: (data.type as any) || 'Unbranded',
+      target_engines: data.target_engines || targetEngines,
+      is_active: data.is_active ?? true,
+      created_at: data.created_at || new Date().toISOString(),
       runs_count: 0,
       avg_score: null,
     };
@@ -297,10 +310,11 @@ export async function createPrompt(payload: {
     revalidatePath('/dashboard');
     return { success: true, data: formattedPrompt };
   } catch (err: any) {
-    console.error('createPrompt error:', err);
+    console.error('createPrompt exception:', err);
     return { success: false, error: err.message };
   }
 }
+
 
 export async function togglePromptActive(
   promptId: string,
