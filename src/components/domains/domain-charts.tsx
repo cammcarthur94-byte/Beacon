@@ -31,6 +31,38 @@ const BAR_COLORS = [
   '#14b8a6', // Teal
 ];
 
+const CustomYAxisTick = (props: any) => {
+  const { x, y, payload } = props;
+  const domain = payload.value;
+  const faviconUrl = `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=64`;
+
+  return (
+    <g transform={`translate(${x - 135},${y - 8})`}>
+      {/* 16px high-res domain favicon image */}
+      <image
+        href={faviconUrl}
+        x={0}
+        y={0}
+        height={16}
+        width={16}
+        preserveAspectRatio="xMidYMid meet"
+      />
+      {/* Domain label */}
+      <text
+        x={22}
+        y={12}
+        textAnchor="start"
+        fill="#334155"
+        fontSize={11}
+        fontWeight={500}
+        className="dark:fill-zinc-200 font-sans"
+      >
+        {domain.length > 16 ? `${domain.substring(0, 14)}...` : domain}
+      </text>
+    </g>
+  );
+};
+
 export function DomainCharts({
   topDomains,
   categoryBreakdown,
@@ -75,7 +107,7 @@ export function DomainCharts({
             <BarChart
               layout="vertical"
               data={chartData}
-              margin={{ top: 5, right: 30, left: 40, bottom: 5 }}
+              margin={{ top: 5, right: 30, left: 10, bottom: 5 }}
             >
               <CartesianGrid
                 strokeDasharray="3 3"
@@ -92,10 +124,10 @@ export function DomainCharts({
               <YAxis
                 type="category"
                 dataKey="domain"
-                tick={{ fontSize: 11, fill: '#334155', fontWeight: 500 }}
+                tick={<CustomYAxisTick />}
                 tickLine={false}
                 axisLine={false}
-                width={110}
+                width={140}
               />
               <Tooltip
                 content={({ active, payload }) => {
