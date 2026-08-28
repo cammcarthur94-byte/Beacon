@@ -57,6 +57,8 @@ const AVAILABLE_ENGINES = [
   { name: 'Copilot', color: 'bg-purple-500', text: 'text-purple-700 dark:text-purple-300', bg: 'bg-purple-50 dark:bg-purple-950/60' },
 ];
 
+const PROMPTS_STORAGE_KEY = 'beacon_prompts_cache_v2';
+
 export default function PromptsPage() {
   const [prompts, setPrompts] = React.useState<DbPrompt[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
@@ -99,15 +101,60 @@ export default function PromptsPage() {
     { query: string; pillar: TechnicalPillar; intent: SearchIntent; type: PromptType; selected: boolean }[]
   >([]);
 
-  // Load prompts on mount
-  const loadPrompts = React.useCallback(async () => {
-    setIsLoading(true);
-    const res = await getPrompts();
-    if (res.success) {
-      setPrompts(res.data);
+  // Save prompts to localStorage helper
+  const saveToLocal = React.useCallback((items: DbPrompt[]) => {
+    try {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(PROMPTS_STORAGE_KEY, JSON.stringify(items));
+      }
+    } catch (e) {
+      console.warn('LocalStorage save error:', e);
     }
-    setIsLoading(false);
   }, []);
+
+  // Load prompts on mount with offline/instant localStorage cache & Supabase sync
+  const loadPrompts = React.useCallback(async () => {
+    // 1. Initialise from localStorage if available for immediate render
+    let cached: DbPrompt[] = [];
+    try {
+      if (typeof window !== 'undefined') {
+        const stored = localStorage.getItem(PROMPTS_STORAGE_KEY);
+        if (stored) {
+          cached = JSON.parse(stored);
+          if (Array.isArray(cached) && cached.length > 0) {
+            setPrompts(cached);
+            setIsLoading(false);
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('LocalStorage read error:', e);
+    }
+
+    try {
+      const res = await getPrompts();
+      if (res.success && res.data && res.data.length > 0) {
+        // Merge server prompts with locally added items
+        const serverMap = new Map(res.data.map((p) => [p.query.toLowerCase().trim(), p]));
+        const merged = [...res.data];
+
+        cached.forEach((localPrompt) => {
+          if (!serverMap.has(localPrompt.query.toLowerCase().trim())) {
+            merged.unshift(localPrompt);
+          }
+        });
+
+        setPrompts(merged);
+        saveToLocal(merged);
+      } else if (cached.length > 0) {
+        setPrompts(cached);
+      }
+    } catch (err) {
+      console.warn('Error fetching prompts from server:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [saveToLocal]);
 
   React.useEffect(() => {
     loadPrompts();
@@ -161,17 +208,27 @@ export default function PromptsPage() {
 
   // Toggle active status
   const handleToggleActive = async (id: string, current: boolean) => {
-    setPrompts((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, is_active: !current } : p))
-    );
-    await togglePromptActive(id, !current);
+    const updated = prompts.map((p) => (p.id === id ? { ...p, is_active: !current } : p));
+    setPrompts(updated);
+    saveToLocal(updated);
+    try {
+      await togglePromptActive(id, !current);
+    } catch (err) {
+      console.warn('Error toggling prompt active in backend:', err);
+    }
   };
 
   // Delete prompt
   const handleDeletePrompt = async (id: string) => {
-    setPrompts((prev) => prev.filter((p) => p.id !== id));
+    const updated = prompts.filter((p) => p.id !== id);
+    setPrompts(updated);
+    saveToLocal(updated);
     setSelectedPromptIds((prev) => prev.filter((pId) => pId !== id));
-    await deletePrompt(id);
+    try {
+      await deletePrompt(id);
+    } catch (err) {
+      console.warn('Error deleting prompt in backend:', err);
+    }
   };
 
   // Copy prompt to clipboard
@@ -255,6 +312,28 @@ export default function PromptsPage() {
     setIsSubmitting(true);
     setAuditFeedback(null);
 
+    // Create prompt model immediately
+    const newPromptItem: DbPrompt = {
+      id: `p-${Date.now()}`,
+      brand_id: 'default',
+      query: queryToAdd,
+      pillar: newPillar,
+      intent: newIntent,
+      type: newType,
+      target_engines: newTargetEngines,
+      is_active: true,
+      created_at: new Date().toISOString(),
+      runs_count: 0,
+      avg_score: null,
+    };
+
+    // 1. Immediately update UI state & local storage
+    const updatedPrompts = [newPromptItem, ...prompts.filter((p) => p.query.toLowerCase().trim() !== queryToAdd.toLowerCase())];
+    setPrompts(updatedPrompts);
+    saveToLocal(updatedPrompts);
+    setAuditFeedback(`Prompt added to library!`);
+
+    // 2. Dispatch to backend Supabase
     try {
       const res = await createPrompt({
         query: queryToAdd,
@@ -265,43 +344,12 @@ export default function PromptsPage() {
       });
 
       if (res.success && res.data) {
-        setPrompts((prev) => [res.data!, ...prev.filter((p) => p.id !== res.data!.id)]);
-        setAuditFeedback(`Prompt added successfully!`);
-      } else {
-        // Optimistic local add
-        const optimisticPrompt: DbPrompt = {
-          id: `p-${Date.now()}`,
-          brand_id: 'default',
-          query: queryToAdd,
-          pillar: newPillar,
-          intent: newIntent,
-          type: newType,
-          target_engines: newTargetEngines,
-          is_active: true,
-          created_at: new Date().toISOString(),
-          runs_count: 0,
-          avg_score: null,
-        };
-        setPrompts((prev) => [optimisticPrompt, ...prev]);
-        setAuditFeedback(`Prompt added to library.`);
+        const synced = [res.data, ...updatedPrompts.filter((p) => p.id !== newPromptItem.id && p.id !== res.data!.id)];
+        setPrompts(synced);
+        saveToLocal(synced);
       }
     } catch (err) {
-      console.error('Error adding prompt:', err);
-      const optimisticPrompt: DbPrompt = {
-        id: `p-${Date.now()}`,
-        brand_id: 'default',
-        query: queryToAdd,
-        pillar: newPillar,
-        intent: newIntent,
-        type: newType,
-        target_engines: newTargetEngines,
-        is_active: true,
-        created_at: new Date().toISOString(),
-        runs_count: 0,
-        avg_score: null,
-      };
-      setPrompts((prev) => [optimisticPrompt, ...prev]);
-      setAuditFeedback(`Prompt added.`);
+      console.warn('Backend createPrompt warning:', err);
     } finally {
       setNewQuery('');
       setNewTargetEngines(['ChatGPT', 'Perplexity', 'Gemini', 'Claude', 'Copilot']);
@@ -310,7 +358,6 @@ export default function PromptsPage() {
       setTimeout(() => setAuditFeedback(null), 4000);
     }
   };
-
 
   // Trigger AI generation
   const handleGenerateAiPrompts = () => {
@@ -359,12 +406,38 @@ export default function PromptsPage() {
 
   const handleApplyAiSuggestions = async () => {
     const selected = aiSuggestions.filter((s) => s.selected);
+    if (selected.length === 0) return;
+
     setIsSubmitting(true);
-    await batchCreatePrompts(selected);
-    await loadPrompts();
-    setIsSubmitting(false);
-    setIsAiModalOpen(false);
-    setAiSuggestions([]);
+    const newItems: DbPrompt[] = selected.map((s, idx) => ({
+      id: `p-ai-${Date.now()}-${idx}`,
+      brand_id: 'default',
+      query: s.query,
+      pillar: s.pillar,
+      intent: s.intent,
+      type: s.type,
+      target_engines: ['ChatGPT', 'Perplexity', 'Gemini', 'Claude', 'Copilot'],
+      is_active: true,
+      created_at: new Date().toISOString(),
+      runs_count: 0,
+      avg_score: null,
+    }));
+
+    const updated = [...newItems, ...prompts];
+    setPrompts(updated);
+    saveToLocal(updated);
+    setAuditFeedback(`Added ${selected.length} AI prompts to library.`);
+
+    try {
+      await batchCreatePrompts(selected);
+    } catch (err) {
+      console.warn('Batch AI prompt creation error:', err);
+    } finally {
+      setIsSubmitting(false);
+      setIsAiModalOpen(false);
+      setAiSuggestions([]);
+      setTimeout(() => setAuditFeedback(null), 4000);
+    }
   };
 
   // CSV Import handler
@@ -388,12 +461,37 @@ export default function PromptsPage() {
     });
 
     setIsSubmitting(true);
-    await batchCreatePrompts(parsed);
-    await loadPrompts();
-    setIsSubmitting(false);
-    setCsvText('');
-    setIsImportModalOpen(false);
+    const newItems: DbPrompt[] = parsed.map((p, idx) => ({
+      id: `p-csv-${Date.now()}-${idx}`,
+      brand_id: 'default',
+      query: p.query,
+      pillar: p.pillar as TechnicalPillar,
+      intent: p.intent as SearchIntent,
+      type: p.type as PromptType,
+      target_engines: p.target_engines,
+      is_active: true,
+      created_at: new Date().toISOString(),
+      runs_count: 0,
+      avg_score: null,
+    }));
+
+    const updated = [...newItems, ...prompts];
+    setPrompts(updated);
+    saveToLocal(updated);
+    setAuditFeedback(`Imported ${parsed.length} prompts from CSV.`);
+
+    try {
+      await batchCreatePrompts(parsed);
+    } catch (err) {
+      console.warn('Batch CSV prompt creation error:', err);
+    } finally {
+      setIsSubmitting(false);
+      setCsvText('');
+      setIsImportModalOpen(false);
+      setTimeout(() => setAuditFeedback(null), 4000);
+    }
   };
+
 
   return (
     <div className="space-y-6">
