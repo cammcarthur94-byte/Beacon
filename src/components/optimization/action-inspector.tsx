@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import {
   Copy,
   Check,
@@ -222,13 +223,16 @@ export function ActionInspector({
             <textarea
               value={action.draftedContent}
               onChange={(e) => onUpdateDraftContent(e.target.value)}
-              rows={12}
-              className="w-full p-4 rounded-xl border border-gray-200 dark:border-zinc-800 bg-gray-950 text-gray-100 font-mono text-xs leading-relaxed focus:outline-none focus:ring-2 focus:ring-blue-500/30 shadow-inner"
+              rows={14}
+              placeholder="Enter markdown content..."
+              className="w-full p-4 rounded-xl border border-gray-200 dark:border-zinc-800 bg-gray-950 text-gray-100 font-mono text-sm leading-relaxed whitespace-pre-wrap focus:outline-none focus:ring-2 focus:ring-blue-500/30 shadow-inner resize-y"
             />
           ) : (
             <div className="p-5 rounded-xl border border-gray-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-950/60 shadow-2xs overflow-x-auto min-h-[260px]">
-              <div className="prose prose-sm dark:prose-invert max-w-none text-xs sm:text-sm prose-headings:font-bold prose-headings:text-gray-900 dark:prose-headings:text-white prose-table:border prose-table:border-gray-200 dark:prose-table:border-zinc-800 prose-th:bg-gray-50 dark:prose-th:bg-zinc-900 prose-th:p-2 prose-td:p-2 prose-td:border-t prose-td:border-gray-100 dark:prose-td:border-zinc-800">
-                <ReactMarkdown>{action.draftedContent}</ReactMarkdown>
+              <div className="prose prose-sm max-w-none dark:prose-invert">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {action.draftedContent}
+                </ReactMarkdown>
               </div>
             </div>
           )}
