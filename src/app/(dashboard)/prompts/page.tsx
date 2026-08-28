@@ -112,39 +112,20 @@ export default function PromptsPage() {
     }
   }, []);
 
-  // Load prompts on mount with offline/instant localStorage cache & Supabase sync
+  // Load prompts on mount directly from Supabase
   const loadPrompts = React.useCallback(async () => {
-    // 1. Initialise from localStorage if available for immediate render
-    let cached: DbPrompt[] = [];
-    try {
-      if (typeof window !== 'undefined') {
-        const stored = localStorage.getItem(PROMPTS_STORAGE_KEY);
-        if (stored) {
-          cached = JSON.parse(stored);
-          if (Array.isArray(cached) && cached.length > 0) {
-            setPrompts(cached);
-            setIsLoading(false);
-          }
-        }
-      }
-    } catch (e) {
-      console.warn('LocalStorage read error:', e);
-    }
-
+    setIsLoading(true);
     try {
       const res = await getPrompts();
       if (res.success && res.data) {
         setPrompts(res.data);
-        saveToLocal(res.data);
-      } else if (cached.length > 0) {
-        setPrompts(cached);
       }
     } catch (err) {
       console.warn('Error fetching prompts from server:', err);
     } finally {
       setIsLoading(false);
     }
-  }, [saveToLocal]);
+  }, []);
 
   React.useEffect(() => {
     loadPrompts();

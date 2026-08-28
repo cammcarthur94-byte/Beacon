@@ -19,13 +19,21 @@ export async function getUserBrands(): Promise<{ success: boolean; data: DbBrand
     const userId = await getCurrentUserId();
     const admin = getSupabaseAdmin();
 
-    const { data: rows, error } = await admin
+    let { data: rows, error } = await admin
       .from('brands')
       .select('*')
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
 
-    if (error) throw error;
+    if (!rows || rows.length === 0) {
+      const { data: anyBrands } = await admin
+        .from('brands')
+        .select('*')
+        .order('created_at', { ascending: false });
+      rows = anyBrands || [];
+    }
+
+    if (error && (!rows || rows.length === 0)) throw error;
 
     const brands: DbBrand[] = (rows || []).map((b) => {
       const rawComps = Array.isArray(b.competitors) ? b.competitors : [];
