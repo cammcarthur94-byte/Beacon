@@ -33,6 +33,24 @@ export async function POST(req: NextRequest) {
 async function handleGenerateReports(req: NextRequest) {
   const startTime = Date.now();
 
+  // 1. Security Check: Validate Cron Secret
+  const authHeader = req.headers.get('authorization');
+  const cronSecret = process.env.CRON_SECRET;
+
+  if (!cronSecret) {
+    console.error('[CRON_REPORT] CRON_SECRET environment variable is not configured');
+    return NextResponse.json(
+      { error: 'Server misconfiguration: CRON_SECRET is missing.' },
+      { status: 500 }
+    );
+  }
+
+  const expectedAuth = `Bearer ${cronSecret}`;
+  if (authHeader !== expectedAuth) {
+    console.warn('[CRON_REPORT] Unauthorized report generation attempt rejected.');
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || 'https://placeholder.supabase.co';
   const supabaseServiceKey =
     process.env.SUPABASE_SERVICE_ROLE_KEY ||
