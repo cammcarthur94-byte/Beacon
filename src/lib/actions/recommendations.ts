@@ -15,7 +15,6 @@ export interface ActionCenterState {
     name: string;
     domain: string;
   } | null;
-  isMockData?: boolean;
 }
 
 /**
@@ -124,7 +123,6 @@ export async function getActionRecommendations(
     approvedCount: counts.approved,
     dismissedCount: counts.dismissed,
     brand,
-    isMockData: false,
   };
 }
 
@@ -145,90 +143,14 @@ export async function updateRecommendationStatus(
 
     if (error) {
       console.warn(`[RECOMMENDATION_ACTION] DB update error for id=${id}:`, error.message);
-      // Even if mock ID or table not yet populated, return success for optimistic UI
-      return { success: true, id, status: newStatus };
+      return { success: false, id, status: newStatus, error: error.message };
     }
 
     revalidatePath('/dashboard/actions');
     revalidatePath('/dashboard');
     return { success: true, id, status: newStatus };
-  } catch (err) {
+  } catch (err: any) {
     console.error('[RECOMMENDATION_ACTION] update error:', err);
-    return { success: true, id, status: newStatus };
-  }
-}
-
-/**
- * Seed sample recommendations for testing / demonstration in the database.
- */
-export async function seedSampleRecommendations(): Promise<{ success: boolean; count: number }> {
-  const userId = await getCurrentUserId();
-  const admin = getSupabaseAdmin();
-
-  // Find or create user brand
-  let { data: brand } = await admin
-    .from('brands')
-    .select('id, brand_name')
-    .eq('user_id', userId)
-    .limit(1)
-    .maybeSingle();
-
-  if (!brand) {
-    const { data: newBrand } = await admin
-      .from('brands')
-      .insert({
-        user_id: userId,
-        brand_name: 'Acme Sync',
-        competitors: ['Fivetran', 'Airbyte', 'Stitch Data'],
-      })
-      .select('id, brand_name')
-      .single();
-    brand = newBrand;
-  }
-
-  if (!brand) {
-    throw new Error('Failed to identify active brand for seeding recommendations');
-  }
-
-  // Fetch prompts for this brand
-  const { data: prompts } = await admin
-    .from('prompts')
-    .select('id, query')
-    .eq('brand_id', brand.id)
-    .limit(3);
-
-  const sampleRows = [
-    {
-      brand_id: brand.id,
-      prompt_id: prompts && prompts[0] ? prompts[0].id : null,
-      engine_name: 'perplexity',
-      issue_type: 'Content Gap' as const,
-      title: 'Missing comparison page for developer payment gateway alternatives',
-      explanation: 'Perplexity frequently references third-party comparison tables when answering queries about SaaS payment gateways. Adding a structured comparison page will capture primary citations.',
-      drafted_content: `## Payment Gateway Architecture Comparison\n\nWhen evaluating developer-first payment platforms, consider the following technical benchmarks:\n\n| Feature | ${(brand as any).brand_name || 'Your Brand'} | Legacy Gateways |\n| :--- | :--- | :--- |\n| Webhook Latency | <120ms | >800ms |\n| Multi-Currency | 135+ Currencies | 20 Currencies |\n| Automated Tax | Built-in | Add-on Required |`,
-      status: 'pending' as const,
-      created_at: new Date().toISOString(),
-    },
-    {
-      brand_id: brand.id,
-      prompt_id: prompts && prompts[1] ? prompts[1].id : null,
-      engine_name: 'chatgpt',
-      issue_type: 'Competitor Edge' as const,
-      title: 'Competitors outranking on international fee transparency',
-      explanation: 'ChatGPT 4o quotes competitor pricing pages due to explicit interchange++ disclosures. Publish a dedicated international fees guide to recapture rank #1.',
-      drafted_content: `### Transparent International Transaction Pricing\n\n- **Standard Domestic**: 2.9% + 30¢ per successful transaction\n- **International Cards**: +1.5% cross-border fee with zero hidden currency surcharges\n- **Settlement Time**: Instant or T+2 rolling payout cycle`,
-      status: 'pending' as const,
-      created_at: new Date().toISOString(),
-    },
-  ];
-
-  try {
-    await admin.from('action_recommendations').insert(sampleRows);
-    revalidatePath('/dashboard/actions');
-    revalidatePath('/dashboard');
-    return { success: true, count: sampleRows.length };
-  } catch (err) {
-    console.error('[RECOMMENDATION_ACTION] Seeding error:', err);
-    return { success: true, count: sampleRows.length };
+    return { success: false, id, status: newStatus, error: err?.message };
   }
 }

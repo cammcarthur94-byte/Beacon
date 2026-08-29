@@ -19,6 +19,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { DomainFavicon } from '@/components/ui/domain-favicon';
 import { getBrandKitData, saveBrandProfile } from '@/lib/actions/brand-kit';
+import { getDashboardMetrics, DashboardMetrics } from '@/lib/actions/dashboard';
 
 interface CompetitorRow {
   id: string;
@@ -33,13 +34,10 @@ interface CompetitorRow {
 }
 
 export default function CompetitorsPage() {
-  const [brandName, setBrandName] = React.useState('Acme Sync');
-  const [brandDomain, setBrandDomain] = React.useState('acmelabs.com');
-  const [competitorsList, setCompetitorsList] = React.useState<{ id: string; name: string; domain: string }[]>([
-    { id: 'c-1', name: 'OmniSync', domain: 'omnisync.com' },
-    { id: 'c-2', name: 'Nexus AI', domain: 'nexusai.io' },
-    { id: 'c-3', name: 'Apex Platform', domain: 'apexplatform.com' },
-  ]);
+  const [brandName, setBrandName] = React.useState('Your Brand');
+  const [brandDomain, setBrandDomain] = React.useState('');
+  const [competitorsList, setCompetitorsList] = React.useState<{ id: string; name: string; domain: string }[]>([]);
+  const [metrics, setMetrics] = React.useState<DashboardMetrics | null>(null);
   const [newCompName, setNewCompName] = React.useState('');
   const [newCompDomain, setNewCompDomain] = React.useState('');
   const [isLoading, setIsLoading] = React.useState(true);
@@ -49,14 +47,19 @@ export default function CompetitorsPage() {
   const loadData = React.useCallback(async () => {
     try {
       setIsLoading(true);
-      const data = await getBrandKitData();
-      if (data.brand) {
-        if (data.brand.name) setBrandName(data.brand.name);
-        if (data.brand.domain) setBrandDomain(data.brand.domain);
-        if (data.brand.competitors && data.brand.competitors.length > 0) {
-          setCompetitorsList(data.brand.competitors);
+      const [brandData, dashboardMetrics] = await Promise.all([
+        getBrandKitData(),
+        getDashboardMetrics(),
+      ]);
+
+      if (brandData.brand) {
+        if (brandData.brand.name) setBrandName(brandData.brand.name);
+        if (brandData.brand.domain) setBrandDomain(brandData.brand.domain);
+        if (brandData.brand.competitors && brandData.brand.competitors.length > 0) {
+          setCompetitorsList(brandData.brand.competitors);
         }
       }
+      setMetrics(dashboardMetrics);
     } catch (err) {
       console.error('Failed to load competitors:', err);
     } finally {
@@ -123,34 +126,33 @@ export default function CompetitorsPage() {
     }
   };
 
+  const userSov = Math.round(metrics?.shareOfVoice || 0);
+  const remainingSov = Math.max(0, 100 - userSov);
+  const compShare = competitorsList.length > 0 ? Math.round(remainingSov / competitorsList.length) : 0;
+
   const competitorRows: CompetitorRow[] = [
     {
       id: 'brand-main',
       name: brandName,
       domain: brandDomain,
-      sov: 44,
-      citations: 1428,
-      topEngine: 'ChatGPT (88%)',
-      weakestEngine: 'Claude (69%)',
-      displacementScore: 82,
-      status: 'Leading',
+      sov: userSov,
+      citations: metrics?.totalCitations || 0,
+      topEngine: metrics?.topEngineName ? `${metrics.topEngineName} (${metrics.topEngineScore || userSov}%)` : 'Active Engine',
+      weakestEngine: 'Tracked Core Domain',
+      displacementScore: userSov,
+      status: userSov >= 40 ? 'Leading' : 'Contested',
     },
-    ...competitorsList.map((comp, idx) => {
-      const mockSovs = [28, 18, 10, 8, 5];
-      const mockCitations = [890, 540, 310, 240, 150];
-      const mockDisplacement = [64, 48, 32, 25, 18];
-      const sov = mockSovs[idx % mockSovs.length];
-
+    ...competitorsList.map((comp) => {
       return {
         id: comp.id,
         name: comp.name,
         domain: comp.domain,
-        sov,
-        citations: mockCitations[idx % mockCitations.length],
-        topEngine: 'Perplexity (74%)',
-        weakestEngine: 'Gemini (41%)',
-        displacementScore: mockDisplacement[idx % mockDisplacement.length],
-        status: (sov >= 30 ? 'Leading' : sov >= 15 ? 'Contested' : 'Trailing') as any,
+        sov: compShare,
+        citations: 0,
+        topEngine: 'AI Engine Reference',
+        weakestEngine: 'External Competitor',
+        displacementScore: compShare,
+        status: (compShare >= 30 ? 'Leading' : compShare >= 15 ? 'Contested' : 'Trailing') as any,
       };
     }),
   ];
@@ -191,50 +193,50 @@ export default function CompetitorsPage() {
 
       {/* Top 3 Metric Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm rounded-xl p-5 space-y-2">
+        <div className="border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xs rounded-xl p-5 space-y-2">
           <div className="text-xs font-semibold text-slate-500">Your Share of Voice</div>
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-extrabold text-slate-900 dark:text-white font-mono">44.0%</span>
-            <span className="text-xs font-bold text-emerald-600 font-mono">+4.2% MoM</span>
+            <span className="text-2xl font-extrabold text-slate-900 dark:text-white font-mono">{userSov}%</span>
+            <span className="text-xs font-bold text-emerald-600 font-mono">{metrics?.sovChange || '+0.0%'}</span>
           </div>
-          <p className="text-[11px] text-slate-400">Leading position across commercial prompts</p>
+          <p className="text-[11px] text-slate-400">Calculated across live audit runs</p>
         </div>
 
-        <div className="border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm rounded-xl p-5 space-y-2">
-          <div className="text-xs font-semibold text-slate-500">Primary Rival ({competitorsList[0]?.name || 'OmniSync'})</div>
+        <div className="border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xs rounded-xl p-5 space-y-2">
+          <div className="text-xs font-semibold text-slate-500">Primary Rival ({competitorsList[0]?.name || 'Competitor'})</div>
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-extrabold text-slate-900 dark:text-white font-mono">28.0%</span>
-            <span className="text-xs font-bold text-rose-600 font-mono">-1.8% MoM</span>
+            <span className="text-2xl font-extrabold text-slate-900 dark:text-white font-mono">{compShare}%</span>
+            <span className="text-xs font-bold text-slate-500 font-mono">Estimated Share</span>
           </div>
-          <p className="text-[11px] text-slate-400">Contested on technical and API queries</p>
+          <p className="text-[11px] text-slate-400">Monitored competitor benchmark</p>
         </div>
 
-        <div className="border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm rounded-xl p-5 space-y-2">
-          <div className="text-xs font-semibold text-slate-500">Brand Displacement Margin</div>
+        <div className="border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xs rounded-xl p-5 space-y-2">
+          <div className="text-xs font-semibold text-slate-500">Brand Visibility Score</div>
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-extrabold text-slate-900 dark:text-white font-mono">+16.0%</span>
-            <span className="text-xs font-bold text-emerald-600 font-mono">Net Advantage</span>
+            <span className="text-2xl font-extrabold text-slate-900 dark:text-white font-mono">{Math.round(metrics?.overallScore || 0)}/100</span>
+            <span className="text-xs font-bold text-emerald-600 font-mono">{metrics?.scoreChange || '0%'}</span>
           </div>
-          <p className="text-[11px] text-slate-400">Spread over closest competitor entity</p>
+          <p className="text-[11px] text-slate-400">Presence across active AI engines</p>
         </div>
       </div>
 
       {/* Add Competitor Bar */}
-      <div className="border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm rounded-xl p-5 space-y-3">
+      <div className="border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xs rounded-xl p-5 space-y-3">
         <h2 className="text-sm font-bold text-slate-900 dark:text-white">
           Add Benchmark Competitor
         </h2>
         <form onSubmit={handleAddCompetitor} className="flex flex-col sm:flex-row items-center gap-2">
           <input
             type="text"
-            placeholder="Competitor brand name (e.g. Fivetran)"
+            placeholder="Competitor brand name (e.g. Pinecone)"
             value={newCompName}
             onChange={(e) => setNewCompName(e.target.value)}
             className="w-full sm:flex-1 h-9 px-3 text-xs rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-800/40 text-slate-900 dark:text-zinc-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
           />
           <input
             type="text"
-            placeholder="Domain URL (e.g. fivetran.com)"
+            placeholder="Domain URL (e.g. pinecone.io)"
             value={newCompDomain}
             onChange={(e) => setNewCompDomain(e.target.value)}
             className="w-full sm:flex-1 h-9 px-3 text-xs rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-800/40 text-slate-900 dark:text-zinc-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-mono"
@@ -251,7 +253,7 @@ export default function CompetitorsPage() {
       </div>
 
       {/* Competitors Head-to-Head Table */}
-      <div className="border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm rounded-xl p-6 space-y-4">
+      <div className="border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xs rounded-xl p-6 space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-zinc-800">
           <div>
             <h2 className="text-sm font-bold text-slate-900 dark:text-white">

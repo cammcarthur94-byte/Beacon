@@ -2,17 +2,17 @@
 
 import * as React from 'react';
 import {
-  ResponsiveContainer,
   AreaChart,
   Area,
   XAxis,
   YAxis,
   Tooltip,
+  ResponsiveContainer,
   CartesianGrid,
 } from 'recharts';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { Eye, PieChart as PieIcon, MessageSquare, Heart, TrendingUp, Maximize2 } from 'lucide-react';
+import { Eye, PieChart, MessageSquare, HeartHandshake, Maximize2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -21,106 +21,95 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 
+export type MetricKey = 'visibility' | 'shareOfVoice' | 'mentions' | 'sentiment';
+
 export interface KpiTimeSeriesPoint {
   date: string;
-  visibility: number;      // 0 - 100
-  shareOfVoice: number;    // 0 - 100 (%)
-  mentions: number;        // 0 - 100 (% mention rate or count)
-  mentionsRaw?: string;    // e.g. "44/56"
-  sentiment: number;       // 0 - 100 (% positive)
+  visibility: number;
+  shareOfVoice: number;
+  mentions: number;
+  mentionsRaw?: string;
+  sentiment: number;
 }
-
-export type MetricKey = 'visibility' | 'shareOfVoice' | 'mentions' | 'sentiment';
 
 interface MetricConfig {
   key: MetricKey;
   name: string;
   shortName: string;
+  unit: string;
   color: string;
   gradientId: string;
-  icon: React.ComponentType<{ className?: string }>;
   activeBg: string;
   activeBorder: string;
   activeText: string;
-  unit: string;
+  icon: React.ComponentType<{ className?: string }>;
   yDomain: [number, number];
   growthText: string;
   description: string;
 }
 
-const METRIC_CONFIGS: Record<MetricKey, MetricConfig> = {
+export const METRIC_CONFIGS: Record<MetricKey, MetricConfig> = {
   visibility: {
     key: 'visibility',
-    name: 'AI Visibility Score Trend',
-    shortName: 'AI Visibility',
-    color: '#10b981',
-    gradientId: 'visSingleGrad',
-    icon: Eye,
-    activeBg: 'bg-emerald-50 dark:bg-emerald-950/60',
-    activeBorder: 'border-emerald-300 dark:border-emerald-700',
-    activeText: 'text-emerald-700 dark:text-emerald-300',
+    name: 'AI Visibility Score',
+    shortName: 'Visibility',
     unit: '/100',
-    yDomain: [0, 100],
-    growthText: '+14.7% Growth',
-    description: 'Aggregated generative AI visibility index across tracked engines',
-  },
-  shareOfVoice: {
-    key: 'shareOfVoice',
-    name: 'AI Share of Voice Trend',
-    shortName: 'Share of Voice',
-    color: '#3b82f6',
-    gradientId: 'sovSingleGrad',
-    icon: PieIcon,
+    color: '#2563eb', // Blue
+    gradientId: 'colorVisibility',
     activeBg: 'bg-blue-50 dark:bg-blue-950/60',
     activeBorder: 'border-blue-300 dark:border-blue-700',
     activeText: 'text-blue-700 dark:text-blue-300',
-    unit: '%',
+    icon: Eye,
     yDomain: [0, 100],
-    growthText: '+3.2% vs Competitors',
-    description: 'Percentage of generative search brand citations vs. competitors',
+    growthText: 'Tracked Score',
+    description: 'Overall presence across generative engines & answer blocks',
   },
-  mentions: {
-    key: 'mentions',
-    name: 'AI Prompt Citations & Mentions',
-    shortName: 'AI Mentions',
-    color: '#8b5cf6',
-    gradientId: 'mentionsSingleGrad',
-    icon: MessageSquare,
+  shareOfVoice: {
+    key: 'shareOfVoice',
+    name: 'AI Share of Voice',
+    shortName: 'Share of Voice',
+    unit: '%',
+    color: '#8b5cf6', // Purple
+    gradientId: 'colorSov',
     activeBg: 'bg-purple-50 dark:bg-purple-950/60',
     activeBorder: 'border-purple-300 dark:border-purple-700',
     activeText: 'text-purple-700 dark:text-purple-300',
-    unit: '%',
+    icon: PieChart,
     yDomain: [0, 100],
-    growthText: '+8.5% Citations',
-    description: 'Prompt coverage and mention volume across simulated search clusters',
+    growthText: 'Market Share',
+    description: 'Proportion of AI answers referencing your brand vs competitors',
+  },
+  mentions: {
+    key: 'mentions',
+    name: 'AI Mention Rate',
+    shortName: 'Mentions',
+    unit: '%',
+    color: '#10b981', // Emerald
+    gradientId: 'colorMentions',
+    activeBg: 'bg-emerald-50 dark:bg-emerald-950/60',
+    activeBorder: 'border-emerald-300 dark:border-emerald-700',
+    activeText: 'text-emerald-700 dark:text-emerald-300',
+    icon: MessageSquare,
+    yDomain: [0, 100],
+    growthText: 'Frequency',
+    description: 'Percentage of audited queries containing target brand mentions',
   },
   sentiment: {
     key: 'sentiment',
-    name: 'Brand Sentiment Positive Ratio',
+    name: 'Brand Sentiment',
     shortName: 'Sentiment',
-    color: '#f59e0b',
-    gradientId: 'sentimentSingleGrad',
-    icon: Heart,
+    unit: '%',
+    color: '#f59e0b', // Amber
+    gradientId: 'colorSentiment',
     activeBg: 'bg-amber-50 dark:bg-amber-950/60',
     activeBorder: 'border-amber-300 dark:border-amber-700',
     activeText: 'text-amber-700 dark:text-amber-300',
-    unit: '%',
-    yDomain: [50, 100],
-    growthText: '92% Positive Context',
+    icon: HeartHandshake,
+    yDomain: [0, 100],
+    growthText: 'Net Positive',
     description: 'Contextual tone and perception evaluation in generative answers',
   },
 };
-
-const DEFAULT_SAMPLE_DATA: KpiTimeSeriesPoint[] = [
-  { date: 'Aug 01', visibility: 68, shareOfVoice: 34, mentions: 64, mentionsRaw: '36/56', sentiment: 84 },
-  { date: 'Aug 05', visibility: 71, shareOfVoice: 36, mentions: 68, mentionsRaw: '38/56', sentiment: 86 },
-  { date: 'Aug 09', visibility: 70, shareOfVoice: 38, mentions: 71, mentionsRaw: '40/56', sentiment: 88 },
-  { date: 'Aug 13', visibility: 74, shareOfVoice: 39, mentions: 73, mentionsRaw: '41/56', sentiment: 87 },
-  { date: 'Aug 17', visibility: 73, shareOfVoice: 40, mentions: 75, mentionsRaw: '42/56', sentiment: 89 },
-  { date: 'Aug 21', visibility: 76, shareOfVoice: 41, mentions: 77, mentionsRaw: '43/56', sentiment: 91 },
-  { date: 'Aug 25', visibility: 77, shareOfVoice: 42, mentions: 78, mentionsRaw: '44/56', sentiment: 92 },
-  { date: 'Aug 27', visibility: 78, shareOfVoice: 42, mentions: 79, mentionsRaw: '44/56', sentiment: 92 },
-];
 
 interface VisibilityTrendChartProps {
   data?: KpiTimeSeriesPoint[];
@@ -130,14 +119,14 @@ interface VisibilityTrendChartProps {
 }
 
 export function VisibilityTrendChart({
-  data = DEFAULT_SAMPLE_DATA,
+  data = [],
   dateRange = 'Last 30 Days',
   selectedMetric = 'visibility',
   onSelectMetric,
 }: VisibilityTrendChartProps) {
   const [isExpanded, setIsExpanded] = React.useState(false);
   const currentMetric = METRIC_CONFIGS[selectedMetric] || METRIC_CONFIGS.visibility;
-  const chartData = data && data.length > 0 ? data : DEFAULT_SAMPLE_DATA;
+  const chartData = data && data.length > 0 ? data : [];
 
   // Custom hover tooltip for the single selected metric
   const CustomTooltip = ({ active, payload, label }: any) => {
@@ -154,9 +143,9 @@ export function VisibilityTrendChart({
       return (
         <div className="rounded-xl border border-gray-200/80 dark:border-zinc-800 bg-white/95 dark:bg-zinc-900/95 p-3.5 shadow-xl backdrop-blur-md text-xs space-y-1.5 min-w-[200px]">
           <div className="font-semibold text-gray-900 dark:text-zinc-100 border-b border-gray-100 dark:border-zinc-800 pb-1.5 flex items-center justify-between">
-            <span>{label}, 2026</span>
+            <span>{label}</span>
             <span className="text-[10px] font-mono font-medium px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400">
-              Audit Data
+              Live Audit Data
             </span>
           </div>
 
@@ -193,14 +182,16 @@ export function VisibilityTrendChart({
                 )}>
                   {currentMetric.growthText}
                 </span>
-                <button
-                  type="button"
-                  onClick={() => setIsExpanded(true)}
-                  title="Expand graph"
-                  className="p-1 rounded-lg border border-gray-200/80 dark:border-zinc-800 hover:bg-gray-100 dark:hover:bg-zinc-800 text-gray-500 hover:text-gray-900 dark:hover:text-zinc-100 transition-colors cursor-pointer ml-1"
-                >
-                  <Maximize2 className="w-3.5 h-3.5" />
-                </button>
+                {chartData.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setIsExpanded(true)}
+                    title="Expand graph"
+                    className="p-1 rounded-lg border border-gray-200/80 dark:border-zinc-800 hover:bg-gray-100 dark:hover:bg-zinc-800 text-gray-500 hover:text-gray-900 dark:hover:text-zinc-100 transition-colors cursor-pointer ml-1"
+                  >
+                    <Maximize2 className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
               <CardDescription className="text-xs text-gray-500 dark:text-zinc-400 mt-0.5">
                 {currentMetric.description} ({dateRange})
@@ -242,145 +233,155 @@ export function VisibilityTrendChart({
 
         <CardContent className="pt-2">
           <div className="h-[300px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData} margin={{ top: 10, right: 15, left: -20, bottom: 0 }}>
-                <defs>
-                  <linearGradient id={currentMetric.gradientId} x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={currentMetric.color} stopOpacity={0.28} />
-                    <stop offset="95%" stopColor={currentMetric.color} stopOpacity={0.0} />
-                  </linearGradient>
-                </defs>
+            {chartData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={chartData} margin={{ top: 10, right: 15, left: -20, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id={currentMetric.gradientId} x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor={currentMetric.color} stopOpacity={0.28} />
+                      <stop offset="95%" stopColor={currentMetric.color} stopOpacity={0.0} />
+                    </linearGradient>
+                  </defs>
 
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(150,150,150,0.12)" vertical={false} />
-                <XAxis
-                  dataKey="date"
-                  stroke="#71717a"
-                  fontSize={11}
-                  tickLine={false}
-                  axisLine={false}
-                  tickMargin={8}
-                />
-                <YAxis
-                  stroke="#71717a"
-                  fontSize={11}
-                  tickLine={false}
-                  axisLine={false}
-                  domain={currentMetric.yDomain}
-                  tickFormatter={(val) => (currentMetric.unit === '/100' ? `${val}` : `${val}%`)}
-                />
-                <Tooltip content={<CustomTooltip />} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(150,150,150,0.12)" vertical={false} />
+                  <XAxis
+                    dataKey="date"
+                    stroke="#71717a"
+                    fontSize={11}
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={8}
+                  />
+                  <YAxis
+                    stroke="#71717a"
+                    fontSize={11}
+                    tickLine={false}
+                    axisLine={false}
+                    domain={currentMetric.yDomain}
+                    tickFormatter={(val) => (currentMetric.unit === '/100' ? `${val}` : `${val}%`)}
+                  />
+                  <Tooltip content={<CustomTooltip />} />
 
-                <Area
-                  type="monotone"
-                  dataKey={selectedMetric}
-                  name={currentMetric.shortName}
-                  stroke={currentMetric.color}
-                  strokeWidth={2.5}
-                  fillOpacity={1}
-                  fill={`url(#${currentMetric.gradientId})`}
-                  activeDot={{ r: 6, fill: currentMetric.color, stroke: '#ffffff', strokeWidth: 2 }}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
+                  <Area
+                    type="monotone"
+                    dataKey={selectedMetric}
+                    name={currentMetric.shortName}
+                    stroke={currentMetric.color}
+                    strokeWidth={2.5}
+                    fillOpacity={1}
+                    fill={`url(#${currentMetric.gradientId})`}
+                    activeDot={{ r: 6, fill: currentMetric.color, stroke: '#ffffff', strokeWidth: 2 }}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full flex flex-col items-center justify-center text-center p-6 border border-dashed border-gray-200 dark:border-zinc-800 rounded-xl bg-gray-50/50 dark:bg-zinc-950/30">
+                <p className="text-xs font-semibold text-gray-700 dark:text-zinc-300">
+                  No historical trend points recorded for {dateRange}
+                </p>
+                <p className="text-[11px] text-gray-500 dark:text-zinc-500 mt-1 max-w-sm">
+                  Run an audit or track queries across AI engines to populate live telemetry over time.
+                </p>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
 
       {/* Expanded Modal Dialog */}
-      <Dialog open={isExpanded} onOpenChange={setIsExpanded}>
-        <DialogContent className="max-w-5xl p-6 bg-white dark:bg-zinc-900 border-gray-200 dark:border-zinc-800 shadow-2xl rounded-2xl">
-          <DialogHeader className="pb-3 border-b border-gray-100 dark:border-zinc-800">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pr-6">
-              <div>
-                <DialogTitle className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                  <span>{currentMetric.name} (Expanded View)</span>
-                </DialogTitle>
-                <DialogDescription className="text-xs text-gray-500 dark:text-zinc-400">
-                  {currentMetric.description} — Aggregated time-series trend ({dateRange})
-                </DialogDescription>
-              </div>
+      {chartData.length > 0 && (
+        <Dialog open={isExpanded} onOpenChange={setIsExpanded}>
+          <DialogContent className="max-w-5xl p-6 bg-white dark:bg-zinc-900 border-gray-200 dark:border-zinc-800 shadow-2xl rounded-2xl">
+            <DialogHeader className="pb-3 border-b border-gray-100 dark:border-zinc-800">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pr-6">
+                <div>
+                  <DialogTitle className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    <span>{currentMetric.name} (Expanded View)</span>
+                  </DialogTitle>
+                  <DialogDescription className="text-xs text-gray-500 dark:text-zinc-400">
+                    {currentMetric.description} — Live telemetry ({dateRange})
+                  </DialogDescription>
+                </div>
 
-              {/* Metric Selector Pills inside modal */}
-              <div className="flex items-center gap-1.5 flex-wrap">
-                {(Object.keys(METRIC_CONFIGS) as MetricKey[]).map((key) => {
-                  const m = METRIC_CONFIGS[key];
-                  const isSelected = selectedMetric === key;
-                  return (
-                    <button
-                      key={m.key}
-                      type="button"
-                      onClick={() => onSelectMetric?.(m.key)}
-                      className={cn(
-                        'px-3 py-1 rounded-full text-xs font-medium border transition-all duration-200 flex items-center gap-1.5 cursor-pointer select-none shadow-2xs',
-                        isSelected
-                          ? cn(m.activeBg, m.activeBorder, m.activeText, 'font-semibold')
-                          : 'bg-white dark:bg-zinc-900 border-gray-200 dark:border-zinc-800 text-gray-400 dark:text-zinc-500 opacity-60 hover:opacity-100'
-                      )}
-                    >
-                      <span
+                {/* Metric Selector Pills inside modal */}
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {(Object.keys(METRIC_CONFIGS) as MetricKey[]).map((key) => {
+                    const m = METRIC_CONFIGS[key];
+                    const isSelected = selectedMetric === key;
+                    return (
+                      <button
+                        key={m.key}
+                        type="button"
+                        onClick={() => onSelectMetric?.(m.key)}
                         className={cn(
-                          'w-2 h-2 rounded-full inline-block',
-                          isSelected ? 'scale-125' : 'bg-gray-400 dark:bg-zinc-600'
+                          'px-3 py-1 rounded-full text-xs font-medium border transition-all duration-200 flex items-center gap-1.5 cursor-pointer select-none shadow-2xs',
+                          isSelected
+                            ? cn(m.activeBg, m.activeBorder, m.activeText, 'font-semibold')
+                            : 'bg-white dark:bg-zinc-900 border-gray-200 dark:border-zinc-800 text-gray-400 dark:text-zinc-500 opacity-60 hover:opacity-100'
                         )}
-                        style={{ backgroundColor: isSelected ? m.color : undefined }}
-                      />
-                      <span>{m.shortName}</span>
-                    </button>
-                  );
-                })}
+                      >
+                        <span
+                          className={cn(
+                            'w-2 h-2 rounded-full inline-block',
+                            isSelected ? 'scale-125' : 'bg-gray-400 dark:bg-zinc-600'
+                          )}
+                          style={{ backgroundColor: isSelected ? m.color : undefined }}
+                        />
+                        <span>{m.shortName}</span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
+            </DialogHeader>
+
+            {/* Large High-Res Canvas */}
+            <div className="h-[420px] w-full pt-4">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={chartData} margin={{ top: 10, right: 20, left: -10, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id={`modal_${currentMetric.gradientId}`} x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor={currentMetric.color} stopOpacity={0.32} />
+                      <stop offset="95%" stopColor={currentMetric.color} stopOpacity={0.0} />
+                    </linearGradient>
+                  </defs>
+
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(150,150,150,0.15)" vertical={false} />
+                  <XAxis
+                    dataKey="date"
+                    stroke="#71717a"
+                    fontSize={12}
+                    tickLine={false}
+                    axisLine={{ stroke: 'rgba(150,150,150,0.2)' }}
+                    tickMargin={10}
+                  />
+                  <YAxis
+                    stroke="#71717a"
+                    fontSize={12}
+                    tickLine={false}
+                    axisLine={false}
+                    domain={currentMetric.yDomain}
+                    tickFormatter={(val) => (currentMetric.unit === '/100' ? `${val}` : `${val}%`)}
+                  />
+                  <Tooltip content={<CustomTooltip />} />
+
+                  <Area
+                    type="monotone"
+                    dataKey={selectedMetric}
+                    name={currentMetric.shortName}
+                    stroke={currentMetric.color}
+                    strokeWidth={3.5}
+                    fillOpacity={1}
+                    fill={`url(#modal_${currentMetric.gradientId})`}
+                    dot={{ r: 4, fill: currentMetric.color, stroke: '#ffffff', strokeWidth: 1.5 }}
+                    activeDot={{ r: 7, fill: currentMetric.color, stroke: '#ffffff', strokeWidth: 2 }}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
             </div>
-          </DialogHeader>
-
-          {/* Large High-Res Canvas */}
-          <div className="h-[420px] w-full pt-4">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData} margin={{ top: 10, right: 20, left: -10, bottom: 0 }}>
-                <defs>
-                  <linearGradient id={`modal_${currentMetric.gradientId}`} x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={currentMetric.color} stopOpacity={0.32} />
-                    <stop offset="95%" stopColor={currentMetric.color} stopOpacity={0.0} />
-                  </linearGradient>
-                </defs>
-
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(150,150,150,0.15)" vertical={false} />
-                <XAxis
-                  dataKey="date"
-                  stroke="#71717a"
-                  fontSize={12}
-                  tickLine={false}
-                  axisLine={{ stroke: 'rgba(150,150,150,0.2)' }}
-                  tickMargin={10}
-                />
-                <YAxis
-                  stroke="#71717a"
-                  fontSize={12}
-                  tickLine={false}
-                  axisLine={false}
-                  domain={currentMetric.yDomain}
-                  tickFormatter={(val) => (currentMetric.unit === '/100' ? `${val}` : `${val}%`)}
-                />
-                <Tooltip content={<CustomTooltip />} />
-
-                <Area
-                  type="monotone"
-                  dataKey={selectedMetric}
-                  name={currentMetric.shortName}
-                  stroke={currentMetric.color}
-                  strokeWidth={3.5}
-                  fillOpacity={1}
-                  fill={`url(#modal_${currentMetric.gradientId})`}
-                  dot={{ r: 4, fill: currentMetric.color, stroke: '#ffffff', strokeWidth: 1.5 }}
-                  activeDot={{ r: 7, fill: currentMetric.color, stroke: '#ffffff', strokeWidth: 2 }}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </DialogContent>
-      </Dialog>
+          </DialogContent>
+        </Dialog>
+      )}
     </>
   );
 }
-
-
-

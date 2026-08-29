@@ -83,7 +83,7 @@ export function PushToCmsModal({
 
   React.useEffect(() => {
     if (actionItem) {
-      setTargetPath(actionItem.targetSourceUrl || 'https://acmelabs.com/pricing');
+      setTargetPath(actionItem.targetSourceUrl || '');
     }
   }, [actionItem]);
 

@@ -49,20 +49,18 @@ export default function BrandKitPage() {
     description: string;
     competitors: CompetitorChip[];
   }>({
-    brandName: 'Acme Sync',
-    brandDomain: 'acmelabs.com',
-    industry: 'Technology & B2B SaaS',
-    description: 'Unified enterprise cloud synchronization and real-time data streaming platform.',
+    brandName: '',
+    brandDomain: '',
+    industry: '',
+    description: '',
     competitors: [],
   });
 
   // Brand Profile State
-  const [brandName, setBrandName] = React.useState('Acme Sync');
-  const [brandDomain, setBrandDomain] = React.useState('acmelabs.com');
-  const [industry, setIndustry] = React.useState('Technology & B2B SaaS');
-  const [description, setDescription] = React.useState(
-    'Unified enterprise cloud synchronization and real-time data streaming platform.'
-  );
+  const [brandName, setBrandName] = React.useState('');
+  const [brandDomain, setBrandDomain] = React.useState('');
+  const [industry, setIndustry] = React.useState('');
+  const [description, setDescription] = React.useState('');
   const [savedSuccess, setSavedSuccess] = React.useState(false);
   const [statusMessage, setStatusMessage] = React.useState<{
     type: 'success' | 'error';
@@ -70,11 +68,7 @@ export default function BrandKitPage() {
   } | null>(null);
 
   // Competitors State
-  const [competitors, setCompetitors] = React.useState<CompetitorChip[]>([
-    { id: 'c-1', name: 'OmniSync', domain: 'omnisync.com' },
-    { id: 'c-2', name: 'Nexus AI', domain: 'nexusai.io' },
-    { id: 'c-3', name: 'Apex Platform', domain: 'apexplatform.com' },
-  ]);
+  const [competitors, setCompetitors] = React.useState<CompetitorChip[]>([]);
   const [newCompName, setNewCompName] = React.useState('');
   const [newCompDomain, setNewCompDomain] = React.useState('');
 
@@ -92,20 +86,11 @@ export default function BrandKitPage() {
       setIsLoading(true);
       const data = await getBrandKitData();
       if (data.brand) {
-        const loadedName = data.brand.name || 'Acme Sync';
-        const loadedDomain = data.brand.domain || 'acmelabs.com';
-        const loadedIndustry = data.brand.industry || 'Technology & B2B SaaS';
-        const loadedDesc =
-          data.brand.description ||
-          'Unified enterprise cloud synchronization and real-time data streaming platform.';
-        const loadedComps =
-          data.brand.competitors && data.brand.competitors.length > 0
-            ? data.brand.competitors
-            : [
-                { id: 'c-1', name: 'OmniSync', domain: 'omnisync.com' },
-                { id: 'c-2', name: 'Nexus AI', domain: 'nexusai.io' },
-                { id: 'c-3', name: 'Apex Platform', domain: 'apexplatform.com' },
-              ];
+        const loadedName = data.brand.name || '';
+        const loadedDomain = data.brand.domain || '';
+        const loadedIndustry = data.brand.industry || '';
+        const loadedDesc = data.brand.description || '';
+        const loadedComps = data.brand.competitors || [];
 
         setBrandName(loadedName);
         setBrandDomain(loadedDomain);
@@ -122,7 +107,7 @@ export default function BrandKitPage() {
         });
       }
     } catch (err) {
-      console.error('Failed to load brand kit data:', err);
+      console.error('Failed to load brand data:', err);
       setStatusMessage({
         type: 'error',
         text: 'Failed to load brand configuration from Supabase.',
@@ -297,7 +282,7 @@ export default function BrandKitPage() {
               type="text"
               value={brandName}
               onChange={(e) => setBrandName(e.target.value)}
-              placeholder="e.g. Acme Sync"
+              placeholder="e.g. VectorScale AI"
               className="w-full h-9 px-3 text-xs rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/60 text-slate-900 dark:text-zinc-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all shadow-xs"
             />
             <p className="text-[10px] text-slate-400 dark:text-zinc-500">
@@ -318,7 +303,7 @@ export default function BrandKitPage() {
                 type="text"
                 value={brandDomain}
                 onChange={(e) => setBrandDomain(e.target.value)}
-                placeholder="acmelabs.com"
+                placeholder="e.g. vectorscale.ai"
                 className="w-full h-9 pl-9 pr-3 text-xs rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/60 text-slate-900 dark:text-zinc-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all shadow-xs font-mono"
               />
             </div>

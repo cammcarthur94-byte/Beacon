@@ -29,40 +29,12 @@ export async function getPrompts(brandId?: string): Promise<{ success: boolean; 
     if (brandId) {
       userBrandIds = [brandId];
     } else {
-      let { data: userBrands } = await admin
+      const { data: userBrands } = await admin
         .from('brands')
         .select('id')
         .eq('user_id', userId);
 
       userBrandIds = (userBrands || []).map((b) => b.id);
-
-      if (userBrandIds.length === 0) {
-        // Check if any existing brand is in the database
-        const { data: anyBrand } = await admin
-          .from('brands')
-          .select('id')
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        if (anyBrand?.id) {
-          userBrandIds = [anyBrand.id];
-        } else {
-          // Ensure default brand exists
-          const { data: newBrand } = await admin
-            .from('brands')
-            .insert({
-              user_id: userId,
-              brand_name: 'Acme Sync',
-              domain: 'acmelabs.com',
-              competitors: ['OmniSync', 'Nexus AI', 'Apex Platform'],
-            })
-            .select('id')
-            .single();
-
-          if (newBrand) userBrandIds = [newBrand.id];
-        }
-      }
     }
 
     let prompts: any[] = [];
@@ -77,62 +49,6 @@ export async function getPrompts(brandId?: string): Promise<{ success: boolean; 
         console.warn('[getPrompts] Error fetching from prompts table:', error.message);
       } else if (promptRows) {
         prompts = promptRows;
-      }
-    }
-
-    // If no prompts exist in database yet, seed high-intent starter prompts
-    if (prompts.length === 0 && userBrandIds.length > 0) {
-      const starterBrandId = userBrandIds[0];
-      const starterPrompts = [
-        {
-          brand_id: starterBrandId,
-          query: 'What are the top enterprise developer payment APIs in 2026?',
-          pillar: 'GEO',
-          intent: 'Informational',
-          type: 'Unbranded',
-          is_active: true,
-        },
-        {
-          brand_id: starterBrandId,
-          query: 'Acme Sync vs Stripe international transaction fee comparison',
-          pillar: 'AEO',
-          intent: 'Commercial',
-          type: 'Branded',
-          is_active: true,
-        },
-        {
-          brand_id: starterBrandId,
-          query: 'How to integrate real-time multi-currency checkout in Next.js',
-          pillar: 'AIO',
-          intent: 'Informational',
-          type: 'Unbranded',
-          is_active: true,
-        },
-        {
-          brand_id: starterBrandId,
-          query: 'Best alternatives to Adyen for high-volume SaaS subscription billing',
-          pillar: 'GEO',
-          intent: 'Commercial',
-          type: 'Unbranded',
-          is_active: true,
-        },
-        {
-          brand_id: starterBrandId,
-          query: 'Acme Sync documentation and API latency benchmarks',
-          pillar: 'AEO',
-          intent: 'Navigational',
-          type: 'Branded',
-          is_active: true,
-        },
-      ];
-
-      const { data: insertedStarters } = await admin
-        .from('prompts')
-        .insert(starterPrompts)
-        .select();
-
-      if (insertedStarters && insertedStarters.length > 0) {
-        prompts = insertedStarters;
       }
     }
 
@@ -238,9 +154,9 @@ export async function createPrompt(payload: {
           .from('brands')
           .insert({
             user_id: userId,
-            brand_name: 'Acme Sync',
-            domain: 'acmelabs.com',
-            competitors: ['OmniSync', 'Nexus AI', 'Apex Platform'],
+            brand_name: 'My Brand',
+            domain: 'mybrand.com',
+            competitors: [],
           })
           .select('id')
           .single();
@@ -414,8 +330,8 @@ export async function batchCreatePrompts(
         .from('brands')
         .insert({
           user_id: userId,
-          brand_name: 'Acme Sync',
-          domain: 'acmelabs.com',
+          brand_name: 'My Brand',
+          domain: 'mybrand.com',
           competitors: [],
         })
         .select()

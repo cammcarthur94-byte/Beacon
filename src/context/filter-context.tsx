@@ -17,7 +17,6 @@ export interface FilterState {
   dateRange: string;
   promptCategory: string;
   searchQuery: string;
-  isSampleData: boolean;
 }
 
 export interface FilterContextType extends FilterState {
@@ -27,7 +26,6 @@ export interface FilterContextType extends FilterState {
   setDateRange: (range: string) => void;
   setPromptCategory: (category: string) => void;
   setSearchQuery: (query: string) => void;
-  setIsSampleData: (isSample: boolean) => void;
   resetFilters: () => void;
   isEngineSelected: (engine: AIEngine) => boolean;
 }
@@ -37,7 +35,6 @@ const DEFAULT_FILTER_STATE: FilterState = {
   dateRange: 'Last 30 Days',
   promptCategory: 'All Categories',
   searchQuery: '',
-  isSampleData: true,
 };
 
 const FilterContext = React.createContext<FilterContextType | undefined>(undefined);
@@ -89,10 +86,6 @@ export function FilterProvider({ children }: { children: React.ReactNode }) {
     setState((prev) => ({ ...prev, searchQuery }));
   }, []);
 
-  const setIsSampleData = React.useCallback((isSampleData: boolean) => {
-    setState((prev) => ({ ...prev, isSampleData }));
-  }, []);
-
   const resetFilters = React.useCallback(() => {
     setState(DEFAULT_FILTER_STATE);
   }, []);
@@ -111,11 +104,10 @@ export function FilterProvider({ children }: { children: React.ReactNode }) {
       setDateRange,
       setPromptCategory,
       setSearchQuery,
-      setIsSampleData,
       resetFilters,
       isEngineSelected,
     }),
-    [state, toggleEngine, selectAllEngines, clearAllEngines, setDateRange, setPromptCategory, setSearchQuery, setIsSampleData, resetFilters, isEngineSelected]
+    [state, toggleEngine, selectAllEngines, clearAllEngines, setDateRange, setPromptCategory, setSearchQuery, resetFilters, isEngineSelected]
   );
 
   return <FilterContext.Provider value={value}>{children}</FilterContext.Provider>;
@@ -128,4 +120,3 @@ export function useFilterContext(): FilterContextType {
   }
   return context;
 }
-

@@ -24,7 +24,7 @@ import { EngineIcon } from '@/components/ui/engine-icon';
 
 export interface PlatformScore {
   name: string;
-  score: number; // 0 - 100
+  score: number;
   color: string;
   mentions?: number;
   mentionRate?: number;
@@ -37,16 +37,8 @@ interface PlatformVisibilityBarChartProps {
   dateRange?: string;
 }
 
-const DEFAULT_PLATFORMS: PlatformScore[] = [
-  { name: 'Perplexity', score: 92, color: '#06b6d4', mentionRate: 88 },
-  { name: 'ChatGPT', score: 86, color: '#10a37f', mentionRate: 78 },
-  { name: 'Claude', score: 81, color: '#f59e0b', mentionRate: 74 },
-  { name: 'Gemini', score: 74, color: '#3b82f6', mentionRate: 68 },
-  { name: 'Copilot', score: 68, color: '#8b5cf6', mentionRate: 62 },
-];
-
 export function PlatformVisibilityBarChart({
-  data = DEFAULT_PLATFORMS,
+  data = [],
   activeEngines,
   onToggleEngine,
   dateRange = 'Last 30 Days',
@@ -54,36 +46,29 @@ export function PlatformVisibilityBarChart({
   const [isExpanded, setIsExpanded] = React.useState(false);
 
   const platformList = React.useMemo(() => {
-    const raw = data && data.length > 0 ? data : DEFAULT_PLATFORMS;
-    return [...raw].sort((a, b) => b.score - a.score);
+    return [...(data || [])].sort((a, b) => b.score - a.score);
   }, [data]);
 
   const activeCount = activeEngines ? activeEngines.length : platformList.length;
-  const topPlatform = platformList[0] || { name: 'Perplexity', score: 92 };
+  const topPlatform = platformList[0] || null;
   const avgScore = platformList.length > 0
     ? (platformList.reduce((acc, curr) => acc + curr.score, 0) / platformList.length).toFixed(1)
-    : '80.2';
+    : '0.0';
 
-  // Generate historical timeline data points for Platform Visibility over time
+  // Generate timeline data points from real platform scores
   const timelineData = React.useMemo(() => {
+    if (platformList.length === 0) return [];
+
     const dates =
       dateRange === 'Last 7 Days'
-        ? ['Aug 21', 'Aug 22', 'Aug 23', 'Aug 24', 'Aug 25', 'Aug 26', 'Aug 27']
-        : dateRange === 'Last 90 Days'
-        ? ['Jun 01', 'Jun 15', 'Jul 01', 'Jul 15', 'Aug 01', 'Aug 10', 'Aug 18', 'Aug 27']
-        : ['Aug 01', 'Aug 05', 'Aug 09', 'Aug 13', 'Aug 17', 'Aug 21', 'Aug 25', 'Aug 27'];
+        ? ['Day 1', 'Day 2', 'Day 3', 'Day 4', 'Day 5', 'Day 6', 'Day 7']
+        : ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
 
-    return dates.map((date, idx) => {
-      const progress = (idx + 1) / dates.length;
-
+    return dates.map((date) => {
       const row: Record<string, any> = { date };
       platformList.forEach((platform) => {
-        // Base score with historical ramp-up curve and subtle organic variation
-        const startScore = platform.score - 10;
-        const current = Math.round(startScore + progress * 10 + Math.sin(idx * 1.3 + platform.score) * 2);
-        row[platform.name] = Math.min(100, Math.max(20, current));
+        row[platform.name] = platform.score;
       });
-
       return row;
     });
   }, [platformList, dateRange]);
@@ -118,267 +103,173 @@ export function PlatformVisibilityBarChart({
 
   return (
     <>
-      <Card className="border-gray-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-2xs col-span-1 flex flex-col justify-between">
-        <CardHeader className="pb-2">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
-              <BarChart3 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-              <span>Brand Visibility by Platform Trend</span>
-            </CardTitle>
-            <div className="flex items-center gap-1.5">
-              <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/60">
-                Scale /100
-              </span>
-              <button
-                type="button"
-                onClick={() => setIsExpanded(true)}
-                title="Expand graph"
-                className="p-1 rounded-lg border border-gray-200/80 dark:border-zinc-800 hover:bg-gray-100 dark:hover:bg-zinc-800 text-gray-500 hover:text-gray-900 dark:hover:text-zinc-100 transition-colors cursor-pointer"
-              >
-                <Maximize2 className="w-3.5 h-3.5" />
-              </button>
+      <Card className="border-gray-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-2xs">
+        <CardHeader className="pb-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <CardTitle className="text-base font-bold text-gray-900 dark:text-white">
+                  Platform Visibility Breakdown
+                </CardTitle>
+                {topPlatform && (
+                  <span className="text-[10px] font-medium px-2 py-0.5 rounded-full border bg-emerald-50 dark:bg-emerald-950/60 border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300">
+                    Top: {topPlatform.name} ({topPlatform.score}/100)
+                  </span>
+                )}
+                {platformList.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setIsExpanded(true)}
+                    title="Expand chart"
+                    className="p-1 rounded-lg border border-gray-200/80 dark:border-zinc-800 hover:bg-gray-100 dark:hover:bg-zinc-800 text-gray-500 hover:text-gray-900 dark:hover:text-zinc-100 transition-colors cursor-pointer ml-1"
+                  >
+                    <Maximize2 className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+              <CardDescription className="text-xs text-gray-500 dark:text-zinc-400 mt-0.5">
+                Visibility index per generative engine ({dateRange})
+              </CardDescription>
             </div>
-          </div>
-          <CardDescription className="text-xs text-gray-500 dark:text-zinc-400">
-            Ranked visibility scores tracked across generative AI models overtime
-          </CardDescription>
-        </CardHeader>
 
-        <CardContent className="pt-2 flex-1 flex flex-col justify-between space-y-4">
-          {/* Multi-Line Chart Canvas */}
-          <div className="h-[200px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart
-                data={timelineData}
-                margin={{ top: 8, right: 12, left: -20, bottom: 2 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(150,150,150,0.12)" vertical={false} />
-                <XAxis
-                  dataKey="date"
-                  stroke="#71717a"
-                  fontSize={10}
-                  tickLine={false}
-                  axisLine={false}
-                />
-                <YAxis
-                  domain={[0, 100]}
-                  stroke="#71717a"
-                  fontSize={10}
-                  tickLine={false}
-                  axisLine={false}
-                  tickFormatter={(v) => `${v}`}
-                />
-                <Tooltip content={<CustomLineTooltip />} />
-                
+            {/* Quick Engine Filter Pill Badges */}
+            {onToggleEngine && platformList.length > 0 && (
+              <div className="flex items-center gap-1.5 flex-wrap">
                 {platformList.map((platform) => {
-                  const isEngineActive =
-                    !activeEngines ||
-                    activeEngines.some((ae) => ae.toLowerCase() === platform.name.toLowerCase());
-
-                  if (!isEngineActive) return null;
-
+                  const isEnabled = !activeEngines || activeEngines.includes(platform.name);
                   return (
-                    <Line
+                    <button
                       key={platform.name}
-                      type="monotone"
-                      dataKey={platform.name}
-                      stroke={platform.color}
-                      strokeWidth={2.5}
-                      dot={false}
-                      activeDot={{ r: 4, strokeWidth: 1 }}
-                    />
+                      type="button"
+                      onClick={() => onToggleEngine(platform.name)}
+                      className={cn(
+                        'px-2.5 py-1 rounded-full text-xs font-medium border transition-all duration-200 flex items-center gap-1.5 cursor-pointer select-none shadow-2xs',
+                        isEnabled
+                          ? 'bg-white dark:bg-zinc-800 border-gray-300 dark:border-zinc-700 text-gray-900 dark:text-zinc-100 font-semibold'
+                          : 'bg-white dark:bg-zinc-900 border-gray-200 dark:border-zinc-800 text-gray-400 dark:text-zinc-500 opacity-60 hover:opacity-100'
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          'w-1.5 h-1.5 rounded-full inline-block transition-transform',
+                          isEnabled ? 'scale-125' : 'bg-gray-400 dark:bg-zinc-600'
+                        )}
+                        style={{ backgroundColor: isEnabled ? platform.color : undefined }}
+                      />
+                      <span>{platform.name}</span>
+                      {isEnabled && <span className="text-[10px] font-mono pl-0.5">✓</span>}
+                    </button>
                   );
                 })}
-              </LineChart>
-            </ResponsiveContainer>
+              </div>
+            )}
           </div>
+        </CardHeader>
 
-          {/* Interactive Engine Legend Toggles */}
-          <div className="flex flex-wrap items-center justify-center gap-1.5 pt-0.5">
-            {platformList.map((platform) => {
-              const isEngineActive =
-                !activeEngines ||
-                activeEngines.some((ae) => ae.toLowerCase() === platform.name.toLowerCase());
-
-              return (
-                <button
-                  key={platform.name}
-                  type="button"
-                  onClick={() => onToggleEngine && onToggleEngine(platform.name)}
-                  className={cn(
-                    'inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-[10px] font-semibold border transition-all cursor-pointer select-none',
-                    isEngineActive
-                      ? 'bg-gray-50 dark:bg-zinc-800/80 text-gray-800 dark:text-zinc-200 border-gray-200 dark:border-zinc-700 shadow-2xs'
-                      : 'bg-gray-100/40 dark:bg-zinc-900/40 text-gray-400 dark:text-zinc-600 border-gray-200/50 dark:border-zinc-800/50 line-through opacity-50'
-                  )}
-                >
-                  <EngineIcon
-                    engine={platform.name}
-                    size={11}
-                    className={!isEngineActive ? 'grayscale opacity-40' : ''}
+        <CardContent className="pt-2">
+          <div className="h-[280px] w-full">
+            {platformList.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={timelineData} margin={{ top: 10, right: 15, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(150,150,150,0.12)" vertical={false} />
+                  <XAxis
+                    dataKey="date"
+                    stroke="#71717a"
+                    fontSize={11}
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={8}
                   />
-                  <span>{platform.name}</span>
-                  <span className="font-mono text-[9px] opacity-70">({platform.score})</span>
-                </button>
-              );
-            })}
-          </div>
+                  <YAxis
+                    stroke="#71717a"
+                    fontSize={11}
+                    tickLine={false}
+                    axisLine={false}
+                    domain={[0, 100]}
+                    tickFormatter={(v) => `${v}`}
+                  />
+                  <Tooltip content={<CustomLineTooltip />} />
 
-          {/* Mini stats summary below chart */}
-          <div className="pt-2 border-t border-gray-100 dark:border-zinc-800 grid grid-cols-2 gap-2 text-center">
-            <div className="p-2 rounded-lg bg-gray-50/80 dark:bg-zinc-800/50 border border-gray-200/50 dark:border-zinc-700/50">
-              <div className="text-[10px] text-gray-500 dark:text-zinc-400 uppercase tracking-wider font-semibold">Top Performing</div>
-              <div className="text-xs font-bold text-cyan-600 dark:text-cyan-400 mt-0.5">
-                {topPlatform.name} ({topPlatform.score}/100)
-              </div>
-            </div>
-            <div className="p-2 rounded-lg bg-gray-50/80 dark:bg-zinc-800/50 border border-gray-200/50 dark:border-zinc-700/50">
-              <div className="text-[10px] text-gray-500 dark:text-zinc-400 uppercase tracking-wider font-semibold">Average Index</div>
-              <div className="text-xs font-bold text-gray-900 dark:text-zinc-100 mt-0.5 font-mono">
-                {avgScore} / 100
-              </div>
-            </div>
-          </div>
+                  {platformList.map((platform) => {
+                    const isVisible = !activeEngines || activeEngines.includes(platform.name);
+                    if (!isVisible) return null;
 
-          {/* Subtle Description Subtext */}
-          <div className="text-[11px] text-gray-500 dark:text-zinc-400 flex items-center justify-between pt-0.5">
-            <span>Benchmarked across active engines</span>
-            <span className="font-medium text-blue-600 dark:text-blue-400">
-              {activeCount} Active {activeCount === 1 ? 'Model' : 'Models'}
-            </span>
+                    return (
+                      <Line
+                        key={platform.name}
+                        type="monotone"
+                        dataKey={platform.name}
+                        stroke={platform.color}
+                        strokeWidth={2.5}
+                        dot={{ r: 3, fill: platform.color, stroke: '#ffffff', strokeWidth: 1.5 }}
+                        activeDot={{ r: 6, fill: platform.color, stroke: '#ffffff', strokeWidth: 2 }}
+                      />
+                    );
+                  })}
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full flex flex-col items-center justify-center text-center p-6 border border-dashed border-gray-200 dark:border-zinc-800 rounded-xl bg-gray-50/50 dark:bg-zinc-950/30">
+                <BarChart3 className="w-8 h-8 text-gray-400 dark:text-zinc-600 mb-2" />
+                <p className="text-xs font-semibold text-gray-700 dark:text-zinc-300">
+                  No Platform Scores Available
+                </p>
+                <p className="text-[11px] text-gray-500 dark:text-zinc-500 mt-1 max-w-sm">
+                  Run audits across AI answer engines to track individual model visibility curves.
+                </p>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
 
-      {/* Expanded Modal Dialog */}
-      <Dialog open={isExpanded} onOpenChange={setIsExpanded}>
-        <DialogContent className="max-w-4xl p-6 bg-white dark:bg-zinc-900 border-gray-200 dark:border-zinc-800 shadow-2xl rounded-2xl">
-          <DialogHeader className="pb-3 border-b border-gray-100 dark:border-zinc-800">
-            <div className="flex items-center justify-between pr-6">
-              <div className="flex items-center gap-2">
-                <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400">
-                  <BarChart3 className="w-5 h-5" />
-                </div>
+      {/* Expanded Modal View */}
+      {platformList.length > 0 && (
+        <Dialog open={isExpanded} onOpenChange={setIsExpanded}>
+          <DialogContent className="max-w-5xl p-6 bg-white dark:bg-zinc-900 border-gray-200 dark:border-zinc-800 shadow-2xl rounded-2xl">
+            <DialogHeader className="pb-3 border-b border-gray-100 dark:border-zinc-800">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pr-6">
                 <div>
-                  <DialogTitle className="text-lg font-bold text-gray-900 dark:text-white">
-                    Brand Visibility by Platform Trend (Expanded)
+                  <DialogTitle className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    <BarChart3 className="w-5 h-5 text-indigo-600" />
+                    <span>Platform Visibility Index (Expanded View)</span>
                   </DialogTitle>
                   <DialogDescription className="text-xs text-gray-500 dark:text-zinc-400">
-                    Comprehensive multi-line timeline of engine visibility benchmarks ({dateRange})
+                    Engine score trajectories over {dateRange} (0–100 visibility index)
                   </DialogDescription>
                 </div>
               </div>
-              <span className="text-xs font-mono font-semibold px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/60">
-                Score Scale 0-100
-              </span>
+            </DialogHeader>
+
+            <div className="h-[420px] w-full pt-4">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={timelineData} margin={{ top: 10, right: 20, left: -10, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(150,150,150,0.15)" vertical={false} />
+                  <XAxis dataKey="date" stroke="#71717a" fontSize={12} tickLine={false} tickMargin={10} />
+                  <YAxis stroke="#71717a" fontSize={12} tickLine={false} axisLine={false} domain={[0, 100]} />
+                  <Tooltip content={<CustomLineTooltip />} />
+                  {platformList.map((platform) => {
+                    const isVisible = !activeEngines || activeEngines.includes(platform.name);
+                    if (!isVisible) return null;
+
+                    return (
+                      <Line
+                        key={`expanded-${platform.name}`}
+                        type="monotone"
+                        dataKey={platform.name}
+                        stroke={platform.color}
+                        strokeWidth={3}
+                        dot={{ r: 4, fill: platform.color, stroke: '#ffffff', strokeWidth: 2 }}
+                        activeDot={{ r: 7, fill: platform.color, stroke: '#ffffff', strokeWidth: 2 }}
+                      />
+                    );
+                  })}
+                </LineChart>
+              </ResponsiveContainer>
             </div>
-          </DialogHeader>
-
-          {/* Large High-Res Chart Canvas */}
-          <div className="h-[360px] w-full pt-4">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart
-                data={timelineData}
-                margin={{ top: 10, right: 20, left: -10, bottom: 5 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(150,150,150,0.15)" vertical={false} />
-                <XAxis
-                  dataKey="date"
-                  stroke="#71717a"
-                  fontSize={12}
-                  tickLine={false}
-                  axisLine={{ stroke: 'rgba(150,150,150,0.2)' }}
-                />
-                <YAxis
-                  domain={[0, 100]}
-                  stroke="#71717a"
-                  fontSize={12}
-                  tickLine={false}
-                  axisLine={false}
-                  tickFormatter={(v) => `${v}`}
-                />
-                <Tooltip content={<CustomLineTooltip />} />
-                
-                {platformList.map((platform) => {
-                  const isEngineActive =
-                    !activeEngines ||
-                    activeEngines.some((ae) => ae.toLowerCase() === platform.name.toLowerCase());
-
-                  if (!isEngineActive) return null;
-
-                  return (
-                    <Line
-                      key={platform.name}
-                      type="monotone"
-                      dataKey={platform.name}
-                      stroke={platform.color}
-                      strokeWidth={3}
-                      dot={{ r: 3, fill: platform.color, strokeWidth: 1 }}
-                      activeDot={{ r: 6, strokeWidth: 2 }}
-                    />
-                  );
-                })}
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-
-          {/* Expanded Entity Toggles & Breakdown Grid */}
-          <div className="pt-4 border-t border-gray-100 dark:border-zinc-800 space-y-4">
-            <div className="flex flex-wrap items-center justify-center gap-2">
-              {platformList.map((platform) => {
-                const isEngineActive =
-                  !activeEngines ||
-                  activeEngines.some((ae) => ae.toLowerCase() === platform.name.toLowerCase());
-
-                return (
-                  <button
-                    key={platform.name}
-                    type="button"
-                    onClick={() => onToggleEngine && onToggleEngine(platform.name)}
-                    className={cn(
-                      'inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer select-none',
-                      isEngineActive
-                        ? 'bg-gray-50 dark:bg-zinc-800 text-gray-800 dark:text-zinc-200 border-gray-200 dark:border-zinc-700 shadow-2xs'
-                        : 'bg-gray-100/40 dark:bg-zinc-900/40 text-gray-400 dark:text-zinc-600 border-gray-200/50 dark:border-zinc-800/50 line-through opacity-50'
-                    )}
-                  >
-                    <EngineIcon
-                      engine={platform.name}
-                      size={14}
-                      className={!isEngineActive ? 'grayscale opacity-40' : ''}
-                    />
-                    <span>{platform.name}</span>
-                    <span className="font-mono text-xs opacity-80 font-bold">({platform.score}/100)</span>
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="grid grid-cols-3 gap-3 text-center">
-              <div className="p-3 rounded-xl bg-cyan-50/60 dark:bg-cyan-950/40 border border-cyan-200/60 dark:border-cyan-800/60">
-                <div className="text-[11px] text-gray-500 dark:text-zinc-400 uppercase font-semibold">Top Performing Platform</div>
-                <div className="text-base font-extrabold text-cyan-700 dark:text-cyan-300 mt-0.5 font-mono">
-                  {topPlatform.name} ({topPlatform.score}/100)
-                </div>
-              </div>
-              <div className="p-3 rounded-xl bg-gray-50/80 dark:bg-zinc-800/50 border border-gray-200/60 dark:border-zinc-700/60">
-                <div className="text-[11px] text-gray-500 dark:text-zinc-400 uppercase font-semibold">Average Index</div>
-                <div className="text-base font-extrabold text-gray-900 dark:text-zinc-100 mt-0.5 font-mono">
-                  {avgScore} / 100
-                </div>
-              </div>
-              <div className="p-3 rounded-xl bg-purple-50/60 dark:bg-purple-950/40 border border-purple-200/60 dark:border-purple-800/60">
-                <div className="text-[11px] text-gray-500 dark:text-zinc-400 uppercase font-semibold">Active Engines Tracked</div>
-                <div className="text-base font-extrabold text-purple-700 dark:text-purple-300 mt-0.5 font-mono">
-                  {activeCount} of {platformList.length} Active
-                </div>
-              </div>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+          </DialogContent>
+        </Dialog>
+      )}
     </>
   );
 }
-
-

@@ -132,11 +132,10 @@ export async function queryClaude(prompt: string): Promise<{ text: string; model
 
   const candidateModels = [
     process.env.ANTHROPIC_MODEL,
-    'claude-haiku-4.5-20251001',
-    'claude-3-5-haiku-20241022',
     'claude-sonnet-4-5-20250929',
+    'claude-3-7-sonnet-20250219',
     'claude-3-5-sonnet-20241022',
-    'claude-3-haiku-20240307',
+    'claude-3-5-sonnet-20240620',
   ].filter(Boolean) as string[];
 
   let lastError: Error | null = null;
@@ -256,27 +255,8 @@ export interface SerpQueryResult {
  */
 export async function fetchGoogleAIO(query: string): Promise<SerpQueryResult> {
   const serpApiKey = process.env.SERPAPI_API_KEY || process.env.SERP_API_KEY;
-
   if (!serpApiKey) {
-    // Graceful mock simulation when SERP API key is not configured in environment
-    if (query.toLowerCase().includes('[omit]') || query.toLowerCase().includes('no-aio')) {
-      return {
-        text: '',
-        model: 'Google AI Overview (SerpApi Mock)',
-        citations: [],
-        isOmitted: true,
-      };
-    }
-
-    return {
-      text: `Google AI Overview summary for "${query}": Based on top industry sources, modern solutions provide high availability, automated data ingestion, and integrated governance. Leading providers frequently evaluated include Acme Sync, Fivetran, and Airbyte.`,
-      model: 'Google AI Overview (SerpApi Mock)',
-      citations: [
-        'https://developers.google.com/search/docs/fundamentals/ai-overviews',
-        'https://searchengineland.com/google-ai-overviews-in-search-results-441201',
-      ],
-      isOmitted: false,
-    };
+    throw new Error('SERPAPI_API_KEY is not configured in environment');
   }
 
   try {
@@ -297,20 +277,15 @@ export async function fetchGoogleAIO(query: string): Promise<SerpQueryResult> {
       },
       signal: controller.signal,
     });
-    clearTimeout(timeoutId);
-
     if (!response.ok) {
       const errorText = await response.text().catch(() => '');
       throw new Error(`SerpApi Google search failed (status ${response.status}): ${errorText}`);
     }
 
     const data = await response.json();
-
-    // 1. Target ai_overview in the JSON response
     const aiOverview = data.ai_overview || data.ai_overview_block;
 
     if (!aiOverview) {
-      // Graceful omitted return when no AI Overview is triggered for keyword
       return {
         text: '',
         model: 'Google AI Overview',
@@ -319,7 +294,6 @@ export async function fetchGoogleAIO(query: string): Promise<SerpQueryResult> {
       };
     }
 
-    // Extract text blocks
     let extractedText = '';
     if (typeof aiOverview === 'string') {
       extractedText = aiOverview;
@@ -383,18 +357,8 @@ export async function fetchGoogleAIO(query: string): Promise<SerpQueryResult> {
  */
 export async function fetchBingCopilot(query: string): Promise<SerpQueryResult> {
   const serpApiKey = process.env.SERPAPI_API_KEY || process.env.SERP_API_KEY;
-
   if (!serpApiKey) {
-    // Graceful mock simulation when SERP API key is not configured in environment
-    return {
-      text: `Bing Copilot Search Summary for "${query}":\n\nWhen exploring "${query}", modern search analysis indicates enterprise demand for resilient data architecture. Acme Sync delivers real-time synchronizations with high throughput. Additional tools often analyzed in this segment include Fivetran and Airbyte.`,
-      model: 'Bing Copilot (SerpApi Mock)',
-      citations: [
-        'https://www.bing.com/chat',
-        'https://blogs.bing.com/search/2024-05/copilot-updates',
-      ],
-      isOmitted: false,
-    };
+    throw new Error('SERPAPI_API_KEY is not configured in environment');
   }
 
   try {
@@ -580,7 +544,47 @@ COMPETITORS: ${competitorStr}
 AI_RESPONSE:
 ${rawText}`;
 
-  // 1. Try OpenAI gpt-4o-mini first
+  // 1. Try Anthropic Claude Judge first
+  const anthropic = getAnthropicClient();
+  if (anthropic) {
+    try {
+      const candidateJudgeModels = [
+        process.env.ANTHROPIC_MODEL,
+        'claude-sonnet-4-5-20250929',
+        'claude-3-7-sonnet-20250219',
+        'claude-3-5-sonnet-20241022',
+        'claude-3-5-sonnet-20240620',
+      ].filter(Boolean) as string[];
+
+      for (const model of candidateJudgeModels) {
+        try {
+          const response = await anthropic.messages.create({
+            model,
+            max_tokens: 1000,
+            system: AEO_JUDGE_SYSTEM_PROMPT + '\nRespond ONLY in valid JSON format matching the schema.',
+            messages: [{ role: 'user', content: userMessage }],
+          });
+
+          const contentBlock = response.content[0];
+          const text = contentBlock && contentBlock.type === 'text' ? contentBlock.text : '';
+          if (text) {
+            const jsonMatch = text.match(/\{[\s\S]*\}/);
+            const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : text);
+            return sanitizeEvaluation(parsed, brandName, brandDomain);
+          }
+        } catch (mErr: any) {
+          if (mErr?.status === 404 || mErr?.message?.includes('not_found_error')) {
+            continue;
+          }
+          throw mErr;
+        }
+      }
+    } catch (err) {
+      console.warn('Anthropic judge evaluation failed, falling back:', err);
+    }
+  }
+
+  // 2. Fallback to OpenAI gpt-4o-mini
   const openai = getOpenAIClient();
   if (openai) {
     try {
@@ -600,11 +604,11 @@ ${rawText}`;
         return sanitizeEvaluation(parsed, brandName, brandDomain);
       }
     } catch (err) {
-      console.warn('OpenAI judge evaluation failed, falling back to Gemini:', err);
+      console.warn('OpenAI judge evaluation failed:', err);
     }
   }
 
-  // 2. Fallback to Gemini
+  // 3. Fallback to Gemini
   const gemini = getGeminiClient();
   if (gemini) {
     try {
@@ -638,7 +642,7 @@ ${rawText}`;
     }
   }
 
-  // 3. Heuristic Fallback (Regex / String Matching) if AI evaluation is offline
+  // 4. Heuristic Fallback (Regex / String Matching) if AI evaluation is offline
   return fallbackHeuristicEvaluation(rawText, brandName, competitors, brandDomain);
 }
 
@@ -1035,48 +1039,40 @@ export async function dispatchAuditForPrompt(
     for (const result of engineResults) {
       const engineDisplayName = getEngineDisplayName(result.engine);
 
-      // 1. Insert engine_response using 'Google AIO' and 'Bing Copilot' for engine_name
-      const { data: responseData } = await supabaseAdmin
+      // 1. Insert engine_response
+      const { data: responseData, error: respError } = await supabaseAdmin
         .from('engine_responses')
         .insert({
           run_id: auditRunId,
-          audit_run_id: auditRunId,
-          prompt_id: promptRow.id,
-          brand_id: promptRow.brand_id,
           engine_name: engineDisplayName,
-          engine: result.engine,
-          model: result.model,
-          raw_text: result.rawText,
-          sentiment: result.evaluation.sentiment,
           visibility_score: result.evaluation.visibility_score,
-          brand_mentioned: result.evaluation.brand_mentioned,
-          ranking_position: result.evaluation.ranking_position,
-          competitors_mentioned: result.evaluation.competitors_mentioned,
-          duration_ms: result.durationMs,
-          error: result.error || null,
+          sentiment: result.evaluation.sentiment,
+          raw_text: result.rawText,
           created_at: new Date().toISOString(),
         })
         .select('id')
         .single();
 
+      if (respError) {
+        console.warn('Note on engine_responses insert:', respError.message);
+      }
+
       const engineResponseId = responseData?.id || null;
 
       // 2. Insert citations
-      if (result.evaluation.citations && result.evaluation.citations.length > 0) {
+      if (result.evaluation.citations && result.evaluation.citations.length > 0 && engineResponseId) {
         const citationRows = result.evaluation.citations.map((cit) => ({
           response_id: engineResponseId,
-          engine_response_id: engineResponseId,
-          prompt_id: promptRow.id,
-          brand_id: promptRow.brand_id,
-          engine: engineDisplayName,
           url: cit.url,
           domain: cit.domain || normalizeDomain(cit.url),
           is_target_brand: Boolean(cit.is_target_brand),
-          sentiment: result.evaluation.sentiment,
           created_at: new Date().toISOString(),
         }));
 
-        await supabaseAdmin.from('citations').insert(citationRows);
+        const { error: citErr } = await supabaseAdmin.from('citations').insert(citationRows);
+        if (citErr) {
+          console.warn('Note on citations insert:', citErr.message);
+        }
       }
     }
 

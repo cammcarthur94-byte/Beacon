@@ -133,22 +133,13 @@ function SettingsContent() {
 
   // Custom Domains State
   const [customDomain, setCustomDomain] = React.useState('');
-  const [domainsList, setDomainsList] = React.useState([
-    {
-      domain: 'analytics.beacon-geo.com',
-      target: 'cname.beacon-geo.com',
-      status: 'verified',
-      ssl: 'active',
-      added: '2w ago',
-    },
-    {
-      domain: 'reports.acmelabs.com',
-      target: 'cname.beacon-geo.com',
-      status: 'pending',
-      ssl: 'provisioning',
-      added: '2d ago',
-    },
-  ]);
+  const [domainsList, setDomainsList] = React.useState<Array<{
+    domain: string;
+    target: string;
+    status: string;
+    ssl: string;
+    added: string;
+  }>>([]);
 
   // Queue Status State
   const [isTriggeringQueue, setIsTriggeringQueue] = React.useState(false);

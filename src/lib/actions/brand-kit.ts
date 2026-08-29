@@ -103,7 +103,7 @@ export async function getBrandKitData(): Promise<BrandKitState> {
       enginesTracked: row.target_engines || ['chatgpt', 'claude', 'perplexity', 'gemini', 'copilot'],
       lastAudited: 'Active',
       status: row.is_active ? 'active' : 'paused',
-      visibilityScore: row.avg_score ?? (row.pillar === 'GEO' ? 88 : 76),
+      visibilityScore: typeof row.avg_score === 'number' ? row.avg_score : 0,
     };
   });
 
