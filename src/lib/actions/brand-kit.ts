@@ -111,8 +111,8 @@ export async function getBrandKitData(): Promise<BrandKitState> {
     brand: {
       id: brandRow.id,
       name: brandRow.brand_name || '',
-      domain: (brandRow as any).domain || `${brandRow.brand_name.toLowerCase().replace(/[^a-z0-9]/g, '')}.com`,
-      industry: (brandRow as any).industry || 'B2B SaaS / Software',
+      domain: (brandRow as any).domain || '',
+      industry: (brandRow as any).industry || '',
       description: (brandRow as any).description || '',
       competitors: parsedCompetitors,
     },
