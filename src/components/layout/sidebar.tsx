@@ -5,9 +5,11 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
+  FileText,
   FileSearch,
-  History,
   Users,
+  BarChart3,
+  History,
   Globe,
   Sparkles,
   Layers,
@@ -17,6 +19,9 @@ import {
   CheckCircle2,
   Sliders,
   Settings,
+  Puzzle,
+  Activity,
+  CreditCard,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getUserBrands, DbBrand } from '@/lib/actions/brands';
@@ -41,14 +46,18 @@ interface NavSection {
 
 const NAV_SECTIONS: NavSection[] = [
   {
+    title: 'Overview',
     items: [
       { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+      { name: 'Reports', href: '/reports', icon: FileText, badge: 'NEW' },
     ],
   },
   {
     title: 'Research',
     items: [
       { name: 'Prompts', href: '/prompts', icon: FileSearch },
+      { name: 'Competitors', href: '/competitors', icon: Users },
+      { name: 'Engine Analytics', href: '/engine-analytics', icon: BarChart3 },
       { name: 'Response History', href: '/responses', icon: History },
       { name: 'Source Intelligence', href: '/visibility-matrix', icon: Globe },
     ],
@@ -63,7 +72,20 @@ const NAV_SECTIONS: NavSection[] = [
     title: 'Configuration',
     items: [
       { name: 'Brand Kit', href: '/brand-kit', icon: Building2 },
+      { name: 'Integrations', href: '/integrations', icon: Puzzle },
       { name: 'Settings', href: '/settings', icon: Settings },
+    ],
+  },
+  {
+    title: 'System',
+    items: [
+      { name: 'Queue Status', href: '/queue', icon: Activity },
+    ],
+  },
+  {
+    title: 'Account',
+    items: [
+      { name: 'Billing', href: '/billing', icon: CreditCard },
     ],
   },
 ];
@@ -92,7 +114,7 @@ export function Sidebar() {
   }, []);
 
   return (
-    <aside className="w-64 bg-gray-50/90 dark:bg-zinc-950 border-r border-gray-200/80 dark:border-zinc-800/80 flex flex-col justify-between h-screen sticky top-0 z-30 select-none shrink-0 overflow-y-auto">
+    <aside className="w-64 bg-gray-50/90 dark:bg-zinc-950 border-r border-gray-200/80 dark:border-zinc-800/80 flex flex-col justify-between h-screen sticky top-0 z-30 select-none shrink-0 overflow-y-auto print:hidden">
       <div className="flex flex-col">
         {/* Logo & Platform Header */}
         <div className="h-16 flex items-center px-5 border-b border-gray-200/60 dark:border-zinc-800/60 gap-3 shrink-0">

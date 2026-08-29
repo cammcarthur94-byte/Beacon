@@ -82,7 +82,7 @@ export function Header({
   };
 
   return (
-    <header className="h-16 border-b border-gray-200/80 dark:border-zinc-800/80 bg-white/70 dark:bg-zinc-900/70 backdrop-blur-xl sticky top-0 z-20 px-4 md:px-6 flex items-center justify-between gap-4">
+    <header className="h-16 border-b border-gray-200/80 dark:border-zinc-800/80 bg-white/70 dark:bg-zinc-900/70 backdrop-blur-xl sticky top-0 z-20 px-4 md:px-6 flex items-center justify-between gap-4 print:hidden">
       {/* Title & Domain Info Context */}
       <div className="flex items-center gap-3 min-w-0">
         <div className="flex flex-col">
