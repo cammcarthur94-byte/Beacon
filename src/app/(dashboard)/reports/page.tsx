@@ -38,6 +38,8 @@ import { cn } from '@/lib/utils';
 import { getReportsData, ReportsData } from '@/lib/actions/reports';
 import { EngineIcon } from '@/components/ui/engine-icon';
 
+import Link from 'next/link';
+
 export default function ReportsPage() {
   const [data, setData] = React.useState<ReportsData | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
@@ -123,7 +125,17 @@ export default function ReportsPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5 self-start sm:self-auto shrink-0">
+        <div className="flex items-center gap-2.5 self-start sm:self-auto shrink-0 flex-wrap">
+          <Button
+            asChild
+            className="h-9 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold gap-2 shadow-sm cursor-pointer"
+          >
+            <Link href="/reports/default">
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Generate Executive Audit (Gemini 3.7)</span>
+            </Link>
+          </Button>
+
           <Button
             variant="outline"
             size="sm"
@@ -146,10 +158,11 @@ export default function ReportsPage() {
 
           <Button
             onClick={handlePrint}
-            className="h-9 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold gap-2 shadow-sm cursor-pointer"
+            variant="outline"
+            className="h-9 px-4 rounded-xl border-slate-200 dark:border-zinc-800 text-xs font-semibold gap-2 shadow-sm cursor-pointer"
           >
             <Printer className="w-3.5 h-3.5" />
-            <span>Download Report (PDF)</span>
+            <span>Print View</span>
           </Button>
         </div>
       </div>
