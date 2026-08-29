@@ -177,14 +177,17 @@ export default function DashboardPage() {
 
     const colors = ['#8b5cf6', '#06b6d4', '#f59e0b', '#ec4899', '#10b981'];
     competitors.forEach((comp, idx) => {
+      const match = comp.match(/^(.*?)(?:\s*\((.*?)\))?$/);
+      const cleanName = match && match[1]?.trim() ? match[1].trim() : comp;
+      const compDomain = match && match[2]?.trim() ? match[2].trim() : `${cleanName.toLowerCase().replace(/[^a-z0-9]/g, '')}.com`;
       const compSov = competitors.length > 0 ? Math.max(0, Math.round((100 - dynamicSov) / competitors.length)) : 0;
       items.push({
-        name: comp,
+        name: cleanName,
         share: compSov,
         color: colors[idx % colors.length],
         isUser: false,
         delta: '0.0%',
-        domain: `${comp.toLowerCase().replace(/[^a-z0-9]/g, '')}.com`,
+        domain: compDomain,
       });
     });
 

@@ -104,66 +104,66 @@ export function PlatformVisibilityBarChart({
   return (
     <>
       <Card className="border-gray-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-2xs">
-        <CardHeader className="pb-3">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <div className="flex items-center gap-2">
-                <CardTitle className="text-base font-bold text-gray-900 dark:text-white">
+        <CardHeader className="pb-3 space-y-3">
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <CardTitle className="text-sm sm:text-base font-bold text-gray-900 dark:text-white">
                   Platform Visibility Breakdown
                 </CardTitle>
                 {topPlatform && (
-                  <span className="text-[10px] font-medium px-2 py-0.5 rounded-full border bg-emerald-50 dark:bg-emerald-950/60 border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300">
+                  <span className="inline-flex items-center justify-center whitespace-nowrap shrink-0 text-xs font-semibold px-2.5 py-0.5 rounded-full border bg-emerald-50 dark:bg-emerald-950/60 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300">
                     Top: {topPlatform.name} ({topPlatform.score}/100)
                   </span>
                 )}
-                {platformList.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setIsExpanded(true)}
-                    title="Expand chart"
-                    className="p-1 rounded-lg border border-gray-200/80 dark:border-zinc-800 hover:bg-gray-100 dark:hover:bg-zinc-800 text-gray-500 hover:text-gray-900 dark:hover:text-zinc-100 transition-colors cursor-pointer ml-1"
-                  >
-                    <Maximize2 className="w-3.5 h-3.5" />
-                  </button>
-                )}
               </div>
-              <CardDescription className="text-xs text-gray-500 dark:text-zinc-400 mt-0.5">
-                Visibility index per generative engine ({dateRange})
-              </CardDescription>
+              {platformList.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setIsExpanded(true)}
+                  title="Expand chart"
+                  className="p-1.5 rounded-lg border border-gray-200/80 dark:border-zinc-800 hover:bg-gray-100 dark:hover:bg-zinc-800 text-gray-500 hover:text-gray-900 dark:hover:text-zinc-100 transition-colors cursor-pointer shrink-0"
+                >
+                  <Maximize2 className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
-
-            {/* Quick Engine Filter Pill Badges */}
-            {onToggleEngine && platformList.length > 0 && (
-              <div className="flex items-center gap-1.5 flex-wrap">
-                {platformList.map((platform) => {
-                  const isEnabled = !activeEngines || activeEngines.includes(platform.name);
-                  return (
-                    <button
-                      key={platform.name}
-                      type="button"
-                      onClick={() => onToggleEngine(platform.name)}
-                      className={cn(
-                        'px-2.5 py-1 rounded-full text-xs font-medium border transition-all duration-200 flex items-center gap-1.5 cursor-pointer select-none shadow-2xs',
-                        isEnabled
-                          ? 'bg-white dark:bg-zinc-800 border-gray-300 dark:border-zinc-700 text-gray-900 dark:text-zinc-100 font-semibold'
-                          : 'bg-white dark:bg-zinc-900 border-gray-200 dark:border-zinc-800 text-gray-400 dark:text-zinc-500 opacity-60 hover:opacity-100'
-                      )}
-                    >
-                      <span
-                        className={cn(
-                          'w-1.5 h-1.5 rounded-full inline-block transition-transform',
-                          isEnabled ? 'scale-125' : 'bg-gray-400 dark:bg-zinc-600'
-                        )}
-                        style={{ backgroundColor: isEnabled ? platform.color : undefined }}
-                      />
-                      <span>{platform.name}</span>
-                      {isEnabled && <span className="text-[10px] font-mono pl-0.5">✓</span>}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
+            <CardDescription className="text-xs text-gray-500 dark:text-zinc-400">
+              Visibility index per generative engine ({dateRange})
+            </CardDescription>
           </div>
+
+          {/* Quick Engine Filter Pill Badges */}
+          {onToggleEngine && platformList.length > 0 && (
+            <div className="flex items-center gap-2 flex-wrap pt-0.5">
+              {platformList.map((platform) => {
+                const isEnabled = !activeEngines || activeEngines.includes(platform.name);
+                return (
+                  <button
+                    key={platform.name}
+                    type="button"
+                    onClick={() => onToggleEngine(platform.name)}
+                    className={cn(
+                      'px-3 py-1 rounded-full text-xs font-medium border transition-all duration-200 flex items-center gap-1.5 cursor-pointer select-none whitespace-nowrap shadow-2xs',
+                      isEnabled
+                        ? 'bg-slate-900 text-white dark:bg-zinc-100 dark:text-zinc-900 border-slate-900 dark:border-zinc-100 font-semibold'
+                        : 'bg-slate-50 dark:bg-zinc-800/70 border-slate-200 dark:border-zinc-700/80 text-slate-700 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white hover:border-slate-300 dark:hover:border-zinc-600'
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        'w-2 h-2 rounded-full inline-block shrink-0',
+                        isEnabled ? 'ring-1 ring-white/60' : 'opacity-80'
+                      )}
+                      style={{ backgroundColor: platform.color }}
+                    />
+                    <span>{platform.name}</span>
+                    {isEnabled && <span className="text-[10px] font-bold pl-0.5">✓</span>}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </CardHeader>
 
         <CardContent className="pt-2">

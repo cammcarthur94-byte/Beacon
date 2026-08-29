@@ -124,62 +124,65 @@ export function CompetitorSovBarChart({
   return (
     <>
       <Card className="border-gray-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-2xs">
-        <CardHeader className="pb-3">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <div className="flex items-center gap-2">
-                <CardTitle className="text-base font-bold text-gray-900 dark:text-white">
+        <CardHeader className="pb-3 space-y-3">
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <CardTitle className="text-sm sm:text-base font-bold text-gray-900 dark:text-white">
                   Competitive Share of Voice (SOV)
                 </CardTitle>
-                <span className="text-[10px] font-medium px-2 py-0.5 rounded-full border bg-blue-50 dark:bg-blue-950/60 border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-300">
+                <span className="inline-flex items-center justify-center whitespace-nowrap shrink-0 text-xs font-semibold px-2.5 py-0.5 rounded-full border bg-blue-50 dark:bg-blue-950/60 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300">
                   {userSov}% Target Share
                 </span>
-                {competitorList.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setIsExpanded(true)}
-                    title="Expand chart"
-                    className="p-1 rounded-lg border border-gray-200/80 dark:border-zinc-800 hover:bg-gray-100 dark:hover:bg-zinc-800 text-gray-500 hover:text-gray-900 dark:hover:text-zinc-100 transition-colors cursor-pointer ml-1"
-                  >
-                    <Maximize2 className="w-3.5 h-3.5" />
-                  </button>
-                )}
               </div>
-              <CardDescription className="text-xs text-gray-500 dark:text-zinc-400 mt-0.5">
-                Market share percentage across audited AI answer engines ({dateRange})
-              </CardDescription>
+              {competitorList.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setIsExpanded(true)}
+                  title="Expand chart"
+                  className="p-1.5 rounded-lg border border-gray-200/80 dark:border-zinc-800 hover:bg-gray-100 dark:hover:bg-zinc-800 text-gray-500 hover:text-gray-900 dark:hover:text-zinc-100 transition-colors cursor-pointer shrink-0"
+                >
+                  <Maximize2 className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
+            <CardDescription className="text-xs text-gray-500 dark:text-zinc-400">
+              Market share percentage across audited AI answer engines ({dateRange})
+            </CardDescription>
+          </div>
 
-            {/* Entity Toggle Filter Badges */}
-            <div className="flex items-center gap-1.5 flex-wrap">
+          {/* Entity Toggle Filter Badges */}
+          {competitorList.length > 0 && (
+            <div className="flex items-center gap-2 flex-wrap pt-0.5">
               {competitorList.map((c) => {
                 const isSelected = activeCompetitors.includes(c.name);
+                const displayName = c.name.replace(/\s*\([^)]*\)/g, '').trim() || c.name;
                 return (
                   <button
                     key={c.name}
                     type="button"
                     onClick={() => toggleEntity(c.name)}
                     className={cn(
-                      'px-2.5 py-1 rounded-full text-xs font-medium border transition-all duration-200 flex items-center gap-1.5 cursor-pointer select-none shadow-2xs',
+                      'px-3 py-1 rounded-full text-xs font-medium border transition-all duration-200 flex items-center gap-1.5 cursor-pointer select-none whitespace-nowrap shadow-2xs',
                       isSelected
-                        ? 'bg-white dark:bg-zinc-800 border-gray-300 dark:border-zinc-700 text-gray-900 dark:text-zinc-100 font-semibold'
-                        : 'bg-white dark:bg-zinc-900 border-gray-200 dark:border-zinc-800 text-gray-400 dark:text-zinc-500 opacity-60 hover:opacity-100'
+                        ? 'bg-slate-900 text-white dark:bg-zinc-100 dark:text-zinc-900 border-slate-900 dark:border-zinc-100 font-semibold'
+                        : 'bg-slate-50 dark:bg-zinc-800/70 border-slate-200 dark:border-zinc-700/80 text-slate-700 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white hover:border-slate-300 dark:hover:border-zinc-600'
                     )}
                   >
                     <span
                       className={cn(
-                        'w-1.5 h-1.5 rounded-full inline-block transition-transform',
-                        isSelected ? 'scale-125' : 'bg-gray-400 dark:bg-zinc-600'
+                        'w-2 h-2 rounded-full inline-block shrink-0',
+                        isSelected ? 'ring-1 ring-white/60' : 'opacity-80'
                       )}
-                      style={{ backgroundColor: isSelected ? c.color : undefined }}
+                      style={{ backgroundColor: c.color }}
                     />
-                    <span className="truncate max-w-[100px]">{c.name}</span>
-                    {isSelected && <span className="text-[10px] font-mono pl-0.5">✓</span>}
+                    <span>{displayName}</span>
+                    {isSelected && <span className="text-[10px] font-bold pl-0.5">✓</span>}
                   </button>
                 );
               })}
             </div>
-          </div>
+          )}
         </CardHeader>
 
         <CardContent className="pt-2">
