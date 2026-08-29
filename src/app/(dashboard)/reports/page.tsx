@@ -131,8 +131,18 @@ export default function ReportsPage() {
             className="h-9 px-3 rounded-xl border-slate-200 dark:border-zinc-800 text-xs font-semibold gap-1.5 cursor-pointer"
           >
             <RotateCw className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Refresh Data</span>
+            <span className="hidden sm:inline">Refresh</span>
           </Button>
+
+          <a
+            href="/api/export"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="h-9 px-3.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-300 text-xs font-semibold flex items-center gap-1.5 shadow-2xs transition-colors"
+          >
+            <ExternalLink className="w-3.5 h-3.5" />
+            <span>Serverless PDF</span>
+          </a>
 
           <Button
             onClick={handlePrint}
