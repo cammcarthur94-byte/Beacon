@@ -48,7 +48,6 @@ const NAV_SECTIONS: NavSection[] = [
     title: 'Overview',
     items: [
       { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-      { name: 'Reports', href: '/reports', icon: FileText, badge: 'NEW' },
     ],
   },
   {

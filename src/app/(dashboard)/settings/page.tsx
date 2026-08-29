@@ -82,18 +82,6 @@ const CRON_JOBS: CronJobStatus[] = [
     promptsEvaluated: 48,
     syncedToDb: true,
   },
-  {
-    id: 'cron-generate-reports',
-    name: 'Executive Report Generator',
-    endpoint: '/api/cron/generate-reports',
-    schedule: 'Weekly on Monday (0 6 * * 1)',
-    status: 'Active',
-    lastRun: '4 days ago',
-    nextRun: 'in 2 days',
-    duration: '6.2s',
-    promptsEvaluated: 156,
-    syncedToDb: true,
-  },
 ];
 
 function SettingsContent() {

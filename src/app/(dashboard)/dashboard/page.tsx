@@ -21,8 +21,6 @@ import {
   Heart,
   BarChart3,
   Maximize2,
-  Download,
-  FileText,
 } from 'lucide-react';
 import {
   Dialog,
@@ -90,15 +88,10 @@ const ENGINES: EngineConfig[] = [
   },
 ];
 
-import { useRouter } from 'next/navigation';
-
 export default function DashboardPage() {
-  const router = useRouter();
   const { dateRange, isSampleData } = useFilterContext();
   const [metrics, setMetrics] = React.useState<DashboardMetrics | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
-  const [isGeneratingReport, setIsGeneratingReport] = React.useState(false);
-  const [isExportingPdf, setIsExportingPdf] = React.useState(false);
 
   // Selected KPI Metric driving the main trendline chart
   const [selectedMetric, setSelectedMetric] = React.useState<MetricKey>('visibility');
@@ -113,46 +106,6 @@ export default function DashboardPage() {
   ]);
   const [viewState, setViewState] = React.useState<ViewState>('domain');
   const [isTableExpanded, setIsTableExpanded] = React.useState(false);
-
-  const handleGenerateReport = async () => {
-    try {
-      setIsGeneratingReport(true);
-      const targetId = 'default';
-      const res = await fetch('/api/reports/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ targetId }),
-      });
-      const data = await res.json();
-      if (data.success && data.report?.workspaceId) {
-        router.push(`/reports/${data.report.workspaceId}`);
-      } else {
-        router.push('/reports/default');
-      }
-    } catch (e) {
-      router.push('/reports/default');
-    } finally {
-      setIsGeneratingReport(false);
-    }
-  };
-
-  const handleDownloadServerlessPdf = async () => {
-    try {
-      setIsExportingPdf(true);
-      const res = await fetch('/api/reports/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ targetId: 'default' }),
-      });
-      const data = await res.json();
-      const snapshotId = data.report?.id || 'a0000000-0000-0000-0000-000000000001';
-      window.open(`/api/export?id=${snapshotId}`, '_blank');
-    } catch (e) {
-      window.open('/api/export', '_blank');
-    } finally {
-      setIsExportingPdf(false);
-    }
-  };
 
   // Load metrics from Supabase
   const loadDashboardData = React.useCallback(async () => {
@@ -460,36 +413,9 @@ export default function DashboardPage() {
           })}
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
-          <div className="text-[11px] text-gray-500 dark:text-zinc-400 font-medium flex items-center gap-1.5 mr-1">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse" />
-            <span className="font-semibold text-gray-900 dark:text-zinc-100">{activeEngines.length}/5</span> Engines Evaluated
-          </div>
-
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={handleDownloadServerlessPdf}
-            disabled={isExportingPdf}
-            className="h-8 px-3 rounded-lg border-gray-200 dark:border-zinc-800 text-xs font-semibold gap-1.5 shadow-2xs hover:bg-gray-50 dark:hover:bg-zinc-800 cursor-pointer"
-          >
-            <Download className={cn('w-3.5 h-3.5', isExportingPdf && 'animate-bounce text-indigo-600')} />
-            <span>{isExportingPdf ? 'Exporting PDF...' : 'Serverless PDF'}</span>
-          </Button>
-
-          <Button
-            size="sm"
-            onClick={handleGenerateReport}
-            disabled={isGeneratingReport}
-            className="h-8 px-3 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold gap-1.5 shadow-sm cursor-pointer"
-          >
-            {isGeneratingReport ? (
-              <RotateCw className="w-3.5 h-3.5 animate-spin" />
-            ) : (
-              <FileText className="w-3.5 h-3.5" />
-            )}
-            <span>{isGeneratingReport ? 'Generating...' : 'Generate Executive Report'}</span>
-          </Button>
+        <div className="text-[11px] text-gray-500 dark:text-zinc-400 font-medium flex items-center gap-1.5">
+          <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse" />
+          <span className="font-semibold text-gray-900 dark:text-zinc-100">{activeEngines.length}/5</span> Engines Evaluated
         </div>
       </div>
 
