@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
 // Structured Zod schema for AI narrative generation
-export const AuditReportNarrativeSchema = z.object({
+const AuditReportNarrativeSchema = z.object({
   key_findings: z.string().describe('A qualitative summary of performance changes since the last audit run, highlighting gains and citation shifts.'),
   struggle_areas: z.array(z.string()).describe('Specific engines, prompt categories, or topics where the brand lost ground or underperformed compared to rivals.'),
   recommendations: z.array(
