@@ -11,6 +11,7 @@ import {
   SentimentType,
   VisibilityTierScore,
 } from '@/types/geo';
+import { getEngineModelCandidates, AI_ENGINE_CONFIGS } from '@/config/ai-models';
 
 // ==============================================================================
 // 0. Domain & Score Helpers
@@ -101,27 +102,41 @@ export async function queryChatGPT(prompt: string): Promise<{ text: string; mode
     throw new Error('OPENAI_API_KEY is not configured');
   }
 
-  const model = 'gpt-4o-mini';
-  const response = await openai.chat.completions.create({
-    model,
-    messages: [
-      {
-        role: 'system',
-        content: 'You are an intelligent search and advisory assistant. Answer the user query comprehensively and objectively, citing reputable products, vendors, and solutions where relevant.',
-      },
-      {
-        role: 'user',
-        content: prompt,
-      },
-    ],
-    temperature: 0.7,
-    max_tokens: 1000,
-  });
+  const candidateModels = getEngineModelCandidates('chatgpt');
+  let lastError: Error | null = null;
 
-  return {
-    text: response.choices[0]?.message?.content || '',
-    model,
-  };
+  for (const model of candidateModels) {
+    try {
+      const response = await openai.chat.completions.create({
+        model,
+        messages: [
+          {
+            role: 'system',
+            content: 'You are an intelligent search and advisory assistant. Answer the user query comprehensively and objectively, citing reputable products, vendors, and solutions where relevant.',
+          },
+          {
+            role: 'user',
+            content: prompt,
+          },
+        ],
+        temperature: 0.7,
+        max_tokens: 1000,
+      });
+
+      return {
+        text: response.choices[0]?.message?.content || '',
+        model,
+      };
+    } catch (err: any) {
+      lastError = err;
+      if (err?.status === 404 || err?.code === 'model_not_found' || err?.message?.includes('model') || err?.message?.includes('does not exist')) {
+        continue; // Try next model candidate
+      }
+      throw err;
+    }
+  }
+
+  throw lastError || new Error('All ChatGPT model candidate queries failed.');
 }
 
 export async function queryClaude(prompt: string): Promise<{ text: string; model: string }> {
@@ -130,14 +145,7 @@ export async function queryClaude(prompt: string): Promise<{ text: string; model
     throw new Error('ANTHROPIC_API_KEY is not configured');
   }
 
-  const candidateModels = [
-    process.env.ANTHROPIC_MODEL,
-    'claude-sonnet-4-5-20250929',
-    'claude-3-7-sonnet-20250219',
-    'claude-3-5-sonnet-20241022',
-    'claude-3-5-sonnet-20240620',
-  ].filter(Boolean) as string[];
-
+  const candidateModels = getEngineModelCandidates('claude');
   let lastError: Error | null = null;
   for (const model of candidateModels) {
     try {
@@ -161,7 +169,7 @@ export async function queryClaude(prompt: string): Promise<{ text: string; model
       };
     } catch (err: any) {
       lastError = err;
-      if (err?.status === 404 || err?.message?.includes('not_found_error')) {
+      if (err?.status === 404 || err?.message?.includes('not_found_error') || err?.message?.includes('model')) {
         continue; // Try next model candidate
       }
       throw err;
@@ -177,15 +185,7 @@ export async function queryGemini(prompt: string): Promise<{ text: string; model
     throw new Error('GEMINI_API_KEY is not configured');
   }
 
-  const candidateModels = [
-    process.env.GEMINI_MODEL,
-    'gemini-3.6-flash',
-    'gemini-3.7-flash',
-    'gemini-flash-latest',
-    'gemini-2.5-flash',
-    'gemini-1.5-flash',
-  ].filter(Boolean) as string[];
-
+  const candidateModels = getEngineModelCandidates('gemini');
   let lastError: Error | null = null;
   for (const model of candidateModels) {
     try {
@@ -215,30 +215,44 @@ export async function queryPerplexity(prompt: string): Promise<{ text: string; m
     throw new Error('PERPLEXITY_API_KEY is not configured');
   }
 
-  const model = 'sonar';
-  const response = await perplexity.chat.completions.create({
-    model,
-    messages: [
-      {
-        role: 'system',
-        content: 'Be precise, factual, and include references to sources.',
-      },
-      {
-        role: 'user',
-        content: prompt,
-      },
-    ],
-  });
+  const candidateModels = getEngineModelCandidates('perplexity');
+  let lastError: Error | null = null;
 
-  // Perplexity's API response includes citations in extended payload
-  const rawResponse = response as unknown as { citations?: string[] };
-  const citations = Array.isArray(rawResponse.citations) ? rawResponse.citations : [];
+  for (const model of candidateModels) {
+    try {
+      const response = await perplexity.chat.completions.create({
+        model,
+        messages: [
+          {
+            role: 'system',
+            content: 'Be precise, factual, and include references to sources.',
+          },
+          {
+            role: 'user',
+            content: prompt,
+          },
+        ],
+      });
 
-  return {
-    text: response.choices[0]?.message?.content || '',
-    model,
-    citations,
-  };
+      // Perplexity's API response includes citations in extended payload
+      const rawResponse = response as unknown as { citations?: string[] };
+      const citations = Array.isArray(rawResponse.citations) ? rawResponse.citations : [];
+
+      return {
+        text: response.choices[0]?.message?.content || '',
+        model,
+        citations,
+      };
+    } catch (err: any) {
+      lastError = err;
+      if (err?.status === 404 || err?.message?.includes('model')) {
+        continue;
+      }
+      throw err;
+    }
+  }
+
+  throw lastError || new Error('All Perplexity model candidate queries failed.');
 }
 
 export interface SerpQueryResult {
@@ -548,13 +562,7 @@ ${rawText}`;
   const anthropic = getAnthropicClient();
   if (anthropic) {
     try {
-      const candidateJudgeModels = [
-        process.env.ANTHROPIC_MODEL,
-        'claude-sonnet-4-5-20250929',
-        'claude-3-7-sonnet-20250219',
-        'claude-3-5-sonnet-20241022',
-        'claude-3-5-sonnet-20240620',
-      ].filter(Boolean) as string[];
+      const candidateJudgeModels = getEngineModelCandidates('claude');
 
       for (const model of candidateJudgeModels) {
         try {
@@ -573,7 +581,7 @@ ${rawText}`;
             return sanitizeEvaluation(parsed, brandName, brandDomain);
           }
         } catch (mErr: any) {
-          if (mErr?.status === 404 || mErr?.message?.includes('not_found_error')) {
+          if (mErr?.status === 404 || mErr?.message?.includes('not_found_error') || mErr?.message?.includes('model')) {
             continue;
           }
           throw mErr;
@@ -584,27 +592,33 @@ ${rawText}`;
     }
   }
 
-  // 2. Fallback to OpenAI gpt-4o-mini
+  // 2. Fallback to OpenAI (GPT-5.4 nano cascade)
   const openai = getOpenAIClient();
   if (openai) {
-    try {
-      const response = await openai.chat.completions.create({
-        model: 'gpt-4o-mini',
-        messages: [
-          { role: 'system', content: AEO_JUDGE_SYSTEM_PROMPT },
-          { role: 'user', content: userMessage },
-        ],
-        response_format: { type: 'json_object' },
-        temperature: 0.1,
-      });
+    const candidateOpenAiModels = getEngineModelCandidates('chatgpt');
+    for (const model of candidateOpenAiModels) {
+      try {
+        const response = await openai.chat.completions.create({
+          model,
+          messages: [
+            { role: 'system', content: AEO_JUDGE_SYSTEM_PROMPT },
+            { role: 'user', content: userMessage },
+          ],
+          response_format: { type: 'json_object' },
+          temperature: 0.1,
+        });
 
-      const content = response.choices[0]?.message?.content;
-      if (content) {
-        const parsed = JSON.parse(content);
-        return sanitizeEvaluation(parsed, brandName, brandDomain);
+        const content = response.choices[0]?.message?.content;
+        if (content) {
+          const parsed = JSON.parse(content);
+          return sanitizeEvaluation(parsed, brandName, brandDomain);
+        }
+      } catch (err: any) {
+        if (err?.status === 404 || err?.code === 'model_not_found' || err?.message?.includes('model')) {
+          continue;
+        }
+        console.warn(`OpenAI judge evaluation failed with model ${model}:`, err);
       }
-    } catch (err) {
-      console.warn('OpenAI judge evaluation failed:', err);
     }
   }
 
@@ -612,7 +626,7 @@ ${rawText}`;
   const gemini = getGeminiClient();
   if (gemini) {
     try {
-      const candidateJudgeModels = ['gemini-3.6-flash', 'gemini-3.7-flash', 'gemini-flash-latest', 'gemini-2.5-flash'];
+      const candidateJudgeModels = getEngineModelCandidates('gemini');
       for (const model of candidateJudgeModels) {
         try {
           const genModel = gemini.getGenerativeModel({

@@ -22,19 +22,15 @@ import { getBrandKitData, saveBrandProfile } from '@/lib/actions/brand-kit';
 import { EngineIcon } from '@/components/ui/engine-icon';
 import { DomainFavicon } from '@/components/ui/domain-favicon';
 
+import { ENGINE_AUDITORS_LIST } from '@/config/ai-models';
+
 interface CompetitorChip {
   id: string;
   name: string;
   domain: string;
 }
 
-const ENGINE_AUDITORS = [
-  { key: 'chatgpt', name: 'ChatGPT', model: 'GPT-4o (Omni Search)', provider: 'OpenAI' },
-  { key: 'perplexity', name: 'Perplexity', model: 'Sonar Pro Online', provider: 'Perplexity AI' },
-  { key: 'gemini', name: 'Gemini', model: 'Gemini 1.5 Pro', provider: 'Google' },
-  { key: 'claude', name: 'Claude', model: 'Claude Haiku 4.5', provider: 'Anthropic' },
-  { key: 'copilot', name: 'Copilot', model: 'Bing GPT-4 Turbo', provider: 'Microsoft' },
-];
+const ENGINE_AUDITORS = ENGINE_AUDITORS_LIST;
 
 export default function BrandKitPage() {
   const [isLoading, setIsLoading] = React.useState(true);

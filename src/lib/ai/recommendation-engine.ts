@@ -9,6 +9,7 @@ import {
   PromptAuditResult,
   PromptWithBrand,
 } from '@/types/geo';
+import { getEngineModelCandidates } from '@/config/ai-models';
 
 // ==============================================================================
 // 1. Exact LLM System Prompt (Task 4)
@@ -68,81 +69,99 @@ AI_ENGINE: ${engineName}
 AI_RESPONSE:
 ${aiResponse}`;
 
-  // 1. Try OpenAI GPT-4o (or gpt-4o-mini if gpt-4o rate limited)
+  // 1. Try OpenAI (GPT-5.4 nano / GPT-4o cascade)
   const openai = getOpenAIClient();
   if (openai) {
-    try {
-      const response = await openai.chat.completions.create({
-        model: 'gpt-4o',
-        messages: [
-          { role: 'system', content: GEO_RECOMMENDATION_SYSTEM_PROMPT },
-          { role: 'user', content: userMessage },
-        ],
-        response_format: { type: 'json_object' },
-        temperature: 0.2,
-      });
+    const candidateModels = getEngineModelCandidates('chatgpt');
+    for (const model of candidateModels) {
+      try {
+        const response = await openai.chat.completions.create({
+          model,
+          messages: [
+            { role: 'system', content: GEO_RECOMMENDATION_SYSTEM_PROMPT },
+            { role: 'user', content: userMessage },
+          ],
+          response_format: { type: 'json_object' },
+          temperature: 0.2,
+        });
 
-      const content = response.choices[0]?.message?.content;
-      if (content) {
-        const parsed = JSON.parse(content);
-        return sanitizeRecommendation(parsed, targetBrand, searchPrompt);
-      }
-    } catch (err) {
-      console.warn('[RECOMMENDATION_ENGINE] OpenAI gpt-4o failed, trying Claude fallback:', err);
-    }
-  }
-
-  // 2. Try Anthropic Claude Haiku 4.5
-  const anthropic = getAnthropicClient();
-  if (anthropic) {
-    try {
-      const response = await anthropic.messages.create({
-        model: 'claude-haiku-4.5-20251001',
-        max_tokens: 1500,
-        system: GEO_RECOMMENDATION_SYSTEM_PROMPT,
-        messages: [
-          {
-            role: 'user',
-            content: `${userMessage}\n\nRespond ONLY with a valid JSON object matching the requested schema.`,
-          },
-        ],
-      });
-
-      const contentBlock = response.content[0];
-      const text = contentBlock && contentBlock.type === 'text' ? contentBlock.text : '';
-      if (text) {
-        const jsonMatch = text.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          const parsed = JSON.parse(jsonMatch[0]);
+        const content = response.choices[0]?.message?.content;
+        if (content) {
+          const parsed = JSON.parse(content);
           return sanitizeRecommendation(parsed, targetBrand, searchPrompt);
         }
+      } catch (err: any) {
+        if (err?.status === 404 || err?.code === 'model_not_found' || err?.message?.includes('model')) {
+          continue;
+        }
+        console.warn(`[RECOMMENDATION_ENGINE] OpenAI model ${model} failed, trying next fallback:`, err);
       }
-    } catch (err) {
-      console.warn('[RECOMMENDATION_ENGINE] Anthropic Claude failed, trying Gemini fallback:', err);
     }
   }
 
-  // 3. Try Google Gemini (1.5 Pro or Flash)
+  // 2. Try Anthropic Claude (Claude Haiku 4.5 cascade)
+  const anthropic = getAnthropicClient();
+  if (anthropic) {
+    const candidateModels = getEngineModelCandidates('claude');
+    for (const model of candidateModels) {
+      try {
+        const response = await anthropic.messages.create({
+          model,
+          max_tokens: 1500,
+          system: GEO_RECOMMENDATION_SYSTEM_PROMPT,
+          messages: [
+            {
+              role: 'user',
+              content: `${userMessage}\n\nRespond ONLY with a valid JSON object matching the requested schema.`,
+            },
+          ],
+        });
+
+        const contentBlock = response.content[0];
+        const text = contentBlock && contentBlock.type === 'text' ? contentBlock.text : '';
+        if (text) {
+          const jsonMatch = text.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            const parsed = JSON.parse(jsonMatch[0]);
+            return sanitizeRecommendation(parsed, targetBrand, searchPrompt);
+          }
+        }
+      } catch (err: any) {
+        if (err?.status === 404 || err?.message?.includes('not_found_error') || err?.message?.includes('model')) {
+          continue;
+        }
+        console.warn(`[RECOMMENDATION_ENGINE] Claude model ${model} failed, trying next fallback:`, err);
+      }
+    }
+  }
+
+  // 3. Try Google Gemini (Gemini 3.1 Flash Lite cascade)
   const gemini = getGeminiClient();
   if (gemini) {
-    try {
-      const model = gemini.getGenerativeModel({
-        model: 'gemini-1.5-pro',
-        generationConfig: {
-          responseMimeType: 'application/json',
-          temperature: 0.2,
-        },
-        systemInstruction: GEO_RECOMMENDATION_SYSTEM_PROMPT,
-      });
+    const candidateModels = getEngineModelCandidates('gemini');
+    for (const model of candidateModels) {
+      try {
+        const genModel = gemini.getGenerativeModel({
+          model,
+          generationConfig: {
+            responseMimeType: 'application/json',
+            temperature: 0.2,
+          },
+          systemInstruction: GEO_RECOMMENDATION_SYSTEM_PROMPT,
+        });
 
-      const result = await model.generateContent(userMessage);
-      const text = result.response.text();
-      if (text) {
-        const parsed = JSON.parse(text);
-        return sanitizeRecommendation(parsed, targetBrand, searchPrompt);
+        const result = await genModel.generateContent(userMessage);
+        const text = result.response.text();
+        if (text) {
+          const parsed = JSON.parse(text);
+          return sanitizeRecommendation(parsed, targetBrand, searchPrompt);
+        }
+      } catch (err: any) {
+        if (err?.status === 404 || err?.message?.includes('not found') || err?.message?.includes('model')) {
+          continue;
+        }
+        console.warn(`[RECOMMENDATION_ENGINE] Gemini model ${model} failed, trying next fallback:`, err);
       }
-    } catch (err) {
-      console.warn('[RECOMMENDATION_ENGINE] Gemini failed, falling back to smart heuristic:', err);
     }
   }
 
