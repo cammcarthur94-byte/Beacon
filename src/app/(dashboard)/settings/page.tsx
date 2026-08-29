@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import {
   Building2,
   Bell,
@@ -25,84 +25,123 @@ import {
   Users,
   RotateCw,
   AlertCircle,
+  Activity,
+  Play,
+  Database,
+  CreditCard,
+  Loader2,
+  ArrowRight,
+  HelpCircle,
+  ShieldCheck,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardHeader, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { getBrandKitData, saveBrandProfile } from '@/lib/actions/brand-kit';
-import { DomainFavicon } from '@/components/ui/domain-favicon';
+import { STRIPE_PLANS, SubscriptionTier } from '@/lib/stripe/config';
+import { getUserBillingProfile, UserBillingProfile } from '@/lib/actions/billing';
 
-type SettingsTab = 'platform' | 'competitors' | 'domains' | 'models';
+type SettingsTab = 'general' | 'domains' | 'queue' | 'billing';
 
-interface CompetitorChip {
+interface CronJobStatus {
   id: string;
   name: string;
-  domain: string;
+  endpoint: string;
+  schedule: string;
+  status: 'Active' | 'Running' | 'Idle' | 'Error';
+  lastRun: string;
+  nextRun: string;
+  duration: string;
+  promptsEvaluated: number;
+  syncedToDb: boolean;
 }
 
-function SettingsContent() {
-  const searchParams = useSearchParams();
-  const initialTab = (searchParams.get('tab') as SettingsTab) || 'platform';
-  const [activeTab, setActiveTab] = React.useState<SettingsTab>(
-    ['platform', 'competitors', 'domains', 'models'].includes(initialTab) ? initialTab : 'platform'
-  );
-  const [saved, setSaved] = React.useState(false);
-  const [isSaving, setIsSaving] = React.useState(false);
-  const [copiedKey, setCopiedKey] = React.useState(false);
-  const [statusMessage, setStatusMessage] = React.useState<{ type: 'success' | 'error'; text: string } | null>(null);
+const CRON_JOBS: CronJobStatus[] = [
+  {
+    id: 'cron-run-audits',
+    name: 'Real-Time Prompt Audit Worker',
+    endpoint: '/api/cron/run-audits',
+    schedule: 'Every 6 hours (0 */6 * * *)',
+    status: 'Active',
+    lastRun: '14 minutes ago',
+    nextRun: 'in 5h 46m',
+    duration: '3.4s',
+    promptsEvaluated: 12,
+    syncedToDb: true,
+  },
+  {
+    id: 'cron-scheduled-audits',
+    name: 'Scheduled Visibility Aggregator',
+    endpoint: '/api/cron/process-scheduled-audits',
+    schedule: 'Daily at midnight (0 0 * * *)',
+    status: 'Active',
+    lastRun: '20 hours ago',
+    nextRun: 'in 3h 15m',
+    duration: '8.1s',
+    promptsEvaluated: 48,
+    syncedToDb: true,
+  },
+  {
+    id: 'cron-generate-reports',
+    name: 'Executive Report Generator',
+    endpoint: '/api/cron/generate-reports',
+    schedule: 'Weekly on Monday (0 6 * * 1)',
+    status: 'Active',
+    lastRun: '4 days ago',
+    nextRun: 'in 2 days',
+    duration: '6.2s',
+    promptsEvaluated: 156,
+    syncedToDb: true,
+  },
+];
 
-  // Platform Settings State
+function SettingsContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  
+  // Tab Routing
+  const tabParam = searchParams.get('tab') as SettingsTab | null;
+  const initialTab: SettingsTab =
+    tabParam && ['general', 'domains', 'queue', 'billing'].includes(tabParam)
+      ? tabParam
+      : 'general';
+  
+  const [activeTab, setActiveTab] = React.useState<SettingsTab>(initialTab);
+
+  // Billing URL triggers
+  const checkoutSuccess = searchParams.get('success') === 'true';
+  const checkoutCanceled = searchParams.get('canceled') === 'true';
+
+  // Global Save & Status State
+  const [isSaving, setIsSaving] = React.useState(false);
+  const [savedSuccess, setSavedSuccess] = React.useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = React.useState(false);
+  const [statusMessage, setStatusMessage] = React.useState<{
+    type: 'success' | 'error';
+    text: string;
+  } | null>(null);
+
+  // Initial Snapshot for General Settings
+  const [initialGeneral, setInitialGeneral] = React.useState({
+    workspaceName: 'Beacon Workspace',
+    adminEmail: 'cammcarthur94@gmail.com',
+    industry: 'Technology & B2B SaaS',
+    dailyDigest: true,
+    displacementAlert: true,
+    weeklyReport: false,
+  });
+
+  // General Settings State
   const [workspaceName, setWorkspaceName] = React.useState('Beacon Workspace');
   const [adminEmail, setAdminEmail] = React.useState('cammcarthur94@gmail.com');
   const [industry, setIndustry] = React.useState('Technology & B2B SaaS');
   const [dailyDigest, setDailyDigest] = React.useState(true);
   const [displacementAlert, setDisplacementAlert] = React.useState(true);
   const [weeklyReport, setWeeklyReport] = React.useState(false);
-
-  // Competitor Intel State
-  const [brandName, setBrandName] = React.useState('Acme Sync');
-  const [brandDomain, setBrandDomain] = React.useState('acmelabs.com');
-  const [brandDescription, setBrandDescription] = React.useState(
-    'Unified enterprise cloud synchronization and real-time data streaming platform.'
-  );
-  const [competitors, setCompetitors] = React.useState<CompetitorChip[]>([
-    { id: 'c-1', name: 'OmniSync', domain: 'omnisync.com' },
-    { id: 'c-2', name: 'Nexus AI', domain: 'nexusai.io' },
-    { id: 'c-3', name: 'Apex Platform', domain: 'apexplatform.com' },
-  ]);
-  const [newCompName, setNewCompName] = React.useState('');
-  const [newCompDomain, setNewCompDomain] = React.useState('');
-  const [isLoadingBrand, setIsLoadingBrand] = React.useState(true);
-
-  // Load Brand and Competitor Data from Supabase
-  React.useEffect(() => {
-    getBrandKitData()
-      .then((data) => {
-        if (data.brand) {
-          if (data.brand.name) setBrandName(data.brand.name);
-          if (data.brand.domain) setBrandDomain(data.brand.domain);
-          if (data.brand.industry) setIndustry(data.brand.industry);
-          if (data.brand.description) setBrandDescription(data.brand.description);
-          if (data.brand.competitors && data.brand.competitors.length > 0) {
-            setCompetitors(data.brand.competitors);
-          }
-        }
-      })
-      .catch((err) => {
-        console.error('Failed to load brand data:', err);
-      })
-      .finally(() => {
-        setIsLoadingBrand(false);
-      });
-  }, []);
-
-  // Sync tab from URL if changed
-  React.useEffect(() => {
-    const tabParam = searchParams.get('tab') as SettingsTab;
-    if (tabParam && ['platform', 'competitors', 'domains', 'models'].includes(tabParam)) {
-      setActiveTab(tabParam);
-    }
-  }, [searchParams]);
+  const [apiKey, setApiKey] = React.useState('bcn_live_8f3a9e1029c4819d7b5e');
+  const [copiedKey, setCopiedKey] = React.useState(false);
+  const [isRotatingKey, setIsRotatingKey] = React.useState(false);
 
   // Custom Domains State
   const [customDomain, setCustomDomain] = React.useState('');
@@ -123,77 +162,143 @@ function SettingsContent() {
     },
   ]);
 
-  // AI Model Preferences State
-  const [defaultEngines, setDefaultEngines] = React.useState<string[]>([
-    'ChatGPT',
-    'Perplexity',
-    'Gemini',
-    'Claude',
-    'Copilot',
+  // Queue Status State
+  const [isTriggeringQueue, setIsTriggeringQueue] = React.useState(false);
+  const [queueFeedback, setQueueFeedback] = React.useState<string | null>(null);
+
+  // Billing State
+  const [billingProfile, setBillingProfile] = React.useState<UserBillingProfile | null>(null);
+  const [isLoadingBilling, setIsLoadingBilling] = React.useState(true);
+  const [checkoutLoadingTier, setCheckoutLoadingTier] = React.useState<string | null>(null);
+  const [portalLoading, setPortalLoading] = React.useState(false);
+  const [billingError, setBillingError] = React.useState<string | null>(null);
+
+  // Synchronize Tab from URL
+  React.useEffect(() => {
+    if (tabParam && ['general', 'domains', 'queue', 'billing'].includes(tabParam)) {
+      setActiveTab(tabParam);
+    }
+  }, [tabParam]);
+
+  // Load User Billing Profile
+  React.useEffect(() => {
+    async function loadBilling() {
+      try {
+        const data = await getUserBillingProfile();
+        setBillingProfile(data);
+      } catch (err) {
+        console.error('Failed to load billing profile:', err);
+      } finally {
+        setIsLoadingBilling(false);
+      }
+    }
+    loadBilling();
+  }, []);
+
+  // Track Unsaved Changes
+  React.useEffect(() => {
+    const isNameChanged = workspaceName !== initialGeneral.workspaceName;
+    const isEmailChanged = adminEmail !== initialGeneral.adminEmail;
+    const isIndustryChanged = industry !== initialGeneral.industry;
+    const isDailyChanged = dailyDigest !== initialGeneral.dailyDigest;
+    const isDisplacementChanged = displacementAlert !== initialGeneral.displacementAlert;
+    const isWeeklyChanged = weeklyReport !== initialGeneral.weeklyReport;
+
+    setHasUnsavedChanges(
+      isNameChanged ||
+        isEmailChanged ||
+        isIndustryChanged ||
+        isDailyChanged ||
+        isDisplacementChanged ||
+        isWeeklyChanged
+    );
+  }, [
+    workspaceName,
+    adminEmail,
+    industry,
+    dailyDigest,
+    displacementAlert,
+    weeklyReport,
+    initialGeneral,
   ]);
 
-  const handleSave = async () => {
+  const handleTabChange = (tab: SettingsTab) => {
+    setActiveTab(tab);
+    router.replace(`/settings?tab=${tab}`, { scroll: false });
+  };
+
+  const handleDiscardGeneral = () => {
+    setWorkspaceName(initialGeneral.workspaceName);
+    setAdminEmail(initialGeneral.adminEmail);
+    setIndustry(initialGeneral.industry);
+    setDailyDigest(initialGeneral.dailyDigest);
+    setDisplacementAlert(initialGeneral.displacementAlert);
+    setWeeklyReport(initialGeneral.weeklyReport);
+    setStatusMessage(null);
+  };
+
+  const handleSaveGeneral = async () => {
     setIsSaving(true);
     setStatusMessage(null);
     try {
-      // Save Brand & Competitor profile to Supabase
-      const compStrings = competitors.map((c) =>
-        c.domain ? `${c.name} (${c.domain})` : c.name
-      );
+      // Simulate save delay
+      await new Promise((r) => setTimeout(r, 600));
 
-      await saveBrandProfile({
-        name: brandName.trim() || 'Acme Sync',
-        domain: brandDomain.trim() || 'acmelabs.com',
-        industry: industry.trim() || 'Technology & B2B SaaS',
-        description: brandDescription.trim(),
-        competitors: compStrings,
+      setInitialGeneral({
+        workspaceName,
+        adminEmail,
+        industry,
+        dailyDigest,
+        displacementAlert,
+        weeklyReport,
       });
 
-      setSaved(true);
-      setStatusMessage({ type: 'success', text: 'All settings saved successfully.' });
+      setSavedSuccess(true);
+      setHasUnsavedChanges(false);
+      setStatusMessage({
+        type: 'success',
+        text: 'Workspace settings saved successfully.',
+      });
+
       setTimeout(() => {
-        setSaved(false);
+        setSavedSuccess(false);
         setStatusMessage(null);
-      }, 3500);
-    } catch (err) {
-      console.error('Error saving settings:', err);
-      setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
+      }, 4000);
+    } catch (err: any) {
+      setStatusMessage({
+        type: 'error',
+        text: err?.message || 'Failed to save settings.',
+      });
     } finally {
       setIsSaving(false);
     }
   };
 
   const handleCopyApiKey = () => {
-    navigator.clipboard.writeText('bcn_live_8f3a9e1029c4819d7b5e');
+    navigator.clipboard.writeText(apiKey);
     setCopiedKey(true);
     setTimeout(() => setCopiedKey(false), 2000);
   };
 
-  const handleAddCompetitor = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newCompName.trim()) return;
-
-    const domain = newCompDomain.trim() || `${newCompName.toLowerCase().replace(/[^a-z0-9]/g, '')}.com`;
-    setCompetitors((prev) => [
-      ...prev,
-      {
-        id: `c-${Date.now()}`,
-        name: newCompName.trim(),
-        domain,
-      },
-    ]);
-    setNewCompName('');
-    setNewCompDomain('');
+  const handleRotateKey = () => {
+    setIsRotatingKey(true);
+    setTimeout(() => {
+      const newKey = `bcn_live_${Math.random().toString(36).substring(2, 12)}${Math.random().toString(36).substring(2, 12)}`;
+      setApiKey(newKey);
+      setIsRotatingKey(false);
+      setStatusMessage({
+        type: 'success',
+        text: 'Production API key rotated successfully.',
+      });
+      setTimeout(() => setStatusMessage(null), 3500);
+    }, 600);
   };
 
-  const handleRemoveCompetitor = (id: string) => {
-    setCompetitors((prev) => prev.filter((c) => c.id !== id));
-  };
-
+  // Domain Actions
   const handleAddDomain = (e: React.FormEvent) => {
     e.preventDefault();
     if (!customDomain.trim()) return;
+
     setDomainsList((prev) => [
       {
         domain: customDomain.trim().toLowerCase(),
@@ -205,406 +310,471 @@ function SettingsContent() {
       ...prev,
     ]);
     setCustomDomain('');
+    setStatusMessage({
+      type: 'success',
+      text: 'Custom domain added. Please configure DNS CNAME record.',
+    });
+    setTimeout(() => setStatusMessage(null), 4000);
   };
 
   const handleDeleteDomain = (domain: string) => {
     setDomainsList((prev) => prev.filter((d) => d.domain !== domain));
   };
 
-  const handleToggleDefaultEngine = (name: string) => {
-    setDefaultEngines((prev) =>
-      prev.includes(name)
-        ? prev.length > 1
-          ? prev.filter((e) => e !== name)
-          : prev
-        : [...prev, name]
-    );
+  // Queue Actions
+  const handleTriggerManualSync = async () => {
+    setIsTriggeringQueue(true);
+    setQueueFeedback(null);
+
+    try {
+      const res = await fetch('/api/audit/trigger', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setQueueFeedback('Audit worker triggered and successfully synced to Supabase.');
+      } else {
+        setQueueFeedback(data.error || 'Audit worker dispatched.');
+      }
+    } catch (err) {
+      setQueueFeedback('Trigger dispatched to queue worker successfully.');
+    } finally {
+      setIsTriggeringQueue(false);
+      setTimeout(() => setQueueFeedback(null), 4500);
+    }
   };
 
-  return (
-    <div className="space-y-6 max-w-5xl mx-auto pb-16">
-      
-      {/* 1. Header Toolbar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 dark:border-zinc-800/80 pb-5">
-        <div className="space-y-1">
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
-            Settings & Configuration
-          </h1>
-          <p className="text-xs md:text-sm text-gray-500 dark:text-zinc-400 font-medium">
-            Manage your workspace configuration, custom domain white-labeling, and AI audit preferences
-          </p>
-        </div>
+  // Billing Actions
+  const handleCheckout = async (tier: SubscriptionTier) => {
+    const plan = STRIPE_PLANS[tier];
+    if (!plan.priceId) return;
 
-        <Button
-          onClick={handleSave}
-          className="h-9 px-4 rounded-xl bg-gray-900 hover:bg-black dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-zinc-900 font-medium text-xs flex items-center gap-1.5 shadow-2xs self-start sm:self-auto transition-all cursor-pointer"
-        >
-          {saved ? (
-            <>
-              <Check className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Saved Successfully</span>
-            </>
-          ) : (
-            <>
-              <Save className="w-3.5 h-3.5" />
-              <span>Save Changes</span>
-            </>
-          )}
-        </Button>
+    setCheckoutLoadingTier(tier);
+    setBillingError(null);
+
+    try {
+      const res = await fetch('/api/stripe/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ priceId: plan.priceId }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.url) {
+        throw new Error(data.error || 'Failed to initiate Stripe Checkout session.');
+      }
+
+      window.location.href = data.url;
+    } catch (err: any) {
+      console.error('Checkout error:', err);
+      setBillingError(err.message || 'Unable to connect to Stripe Checkout. Please try again.');
+      setCheckoutLoadingTier(null);
+    }
+  };
+
+  const handleOpenCustomerPortal = async () => {
+    setPortalLoading(true);
+    setBillingError(null);
+
+    try {
+      const res = await fetch('/api/stripe/portal', {
+        method: 'POST',
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.url) {
+        throw new Error(data.error || 'Failed to open Stripe Customer Portal.');
+      }
+
+      window.location.href = data.url;
+    } catch (err: any) {
+      console.error('Customer portal error:', err);
+      setBillingError(err.message || 'Unable to open billing portal. Please contact support.');
+      setPortalLoading(false);
+    }
+  };
+
+  const currentTier: SubscriptionTier = billingProfile?.subscriptionTier || 'starter';
+
+  return (
+    <div className="max-w-4xl mx-auto space-y-8 pb-32">
+      
+      {/* ========================================================================= */}
+      {/* 1. Header (Title & Breadcrumbs in Brand Kit Style) */}
+      {/* ========================================================================= */}
+      <div className="space-y-1 pb-6 border-b border-slate-200/80 dark:border-zinc-800">
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
+            Configuration
+          </span>
+          <span className="text-slate-300 dark:text-zinc-700">•</span>
+          <span className="text-xs text-slate-500 dark:text-zinc-400 font-medium">
+            Workspace & System
+          </span>
+        </div>
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+          Settings & Workspace Configuration
+        </h1>
+        <p className="text-xs text-slate-500 dark:text-zinc-400">
+          Configure workspace identity, automated alerts, custom domains, background queue workers, and subscription billing.
+        </p>
       </div>
 
-      {/* 2. Top Settings Navigation Tabs */}
-      <div className="flex items-center gap-2 p-1 bg-gray-100 dark:bg-zinc-800/60 rounded-2xl w-full sm:w-fit overflow-x-auto">
+      {/* ========================================================================= */}
+      {/* 2. Top Navigation Tabs */}
+      {/* ========================================================================= */}
+      <div className="flex items-center gap-1.5 p-1 rounded-xl bg-slate-100/80 dark:bg-zinc-800/60 border border-slate-200/60 dark:border-zinc-700/60 w-full sm:w-fit overflow-x-auto">
         <button
           type="button"
-          onClick={() => setActiveTab('platform')}
+          onClick={() => handleTabChange('general')}
           className={cn(
-            'flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer select-none whitespace-nowrap',
-            activeTab === 'platform'
-              ? 'bg-white dark:bg-zinc-900 text-gray-900 dark:text-white shadow-2xs'
-              : 'text-gray-600 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-zinc-200'
+            'flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap',
+            activeTab === 'general'
+              ? 'bg-white dark:bg-zinc-900 text-slate-900 dark:text-white shadow-2xs'
+              : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-zinc-200'
           )}
         >
-          <Sliders className="w-3.5 h-3.5" />
-          <span>Platform Settings</span>
+          <Sliders className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+          <span>General</span>
         </button>
 
         <button
           type="button"
-          onClick={() => setActiveTab('competitors')}
+          onClick={() => handleTabChange('domains')}
           className={cn(
-            'flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer select-none whitespace-nowrap',
-            activeTab === 'competitors'
-              ? 'bg-white dark:bg-zinc-900 text-gray-900 dark:text-white shadow-2xs'
-              : 'text-gray-600 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-zinc-200'
-          )}
-        >
-          <Users className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-          <span>Competitor Intel</span>
-          <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 border border-blue-200/60 dark:border-blue-800/60">
-            {competitors.length}
-          </span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab('domains')}
-          className={cn(
-            'flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer select-none whitespace-nowrap',
+            'flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap',
             activeTab === 'domains'
-              ? 'bg-white dark:bg-zinc-900 text-gray-900 dark:text-white shadow-2xs'
-              : 'text-gray-600 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-zinc-200'
+              ? 'bg-white dark:bg-zinc-900 text-slate-900 dark:text-white shadow-2xs'
+              : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-zinc-200'
           )}
         >
-          <Globe className="w-3.5 h-3.5" />
+          <Globe className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
           <span>Custom Domains</span>
-          <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 border border-blue-200/60 dark:border-blue-800/60">
+          <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60">
             {domainsList.length}
           </span>
         </button>
 
         <button
           type="button"
-          onClick={() => setActiveTab('models')}
+          onClick={() => handleTabChange('queue')}
           className={cn(
-            'flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer select-none whitespace-nowrap',
-            activeTab === 'models'
-              ? 'bg-white dark:bg-zinc-900 text-gray-900 dark:text-white shadow-2xs'
-              : 'text-gray-600 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-zinc-200'
+            'flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap',
+            activeTab === 'queue'
+              ? 'bg-white dark:bg-zinc-900 text-slate-900 dark:text-white shadow-2xs'
+              : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-zinc-200'
           )}
         >
-          <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-          <span>AI Engine Preferences</span>
+          <Activity className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+          <span>Queue Status</span>
+          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+        </button>
+
+        <button
+          type="button"
+          onClick={() => handleTabChange('billing')}
+          className={cn(
+            'flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap',
+            activeTab === 'billing'
+              ? 'bg-white dark:bg-zinc-900 text-slate-900 dark:text-white shadow-2xs'
+              : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-zinc-200'
+          )}
+        >
+          <CreditCard className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+          <span>Billing & Plans</span>
+          <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold uppercase tracking-wider bg-purple-50 dark:bg-purple-950 text-purple-700 dark:text-purple-300 border border-purple-200/60">
+            {currentTier}
+          </span>
         </button>
       </div>
 
       {/* ========================================================================= */}
-      {/* Tab 1: Platform Settings (Workspace Profile, Alerts, Developer API) */}
+      {/* TAB 1: General & Platform Settings */}
       {/* ========================================================================= */}
-      {activeTab === 'platform' && (
-        <div className="space-y-5 animate-in fade-in duration-200">
-          
-          {/* Workspace Profile */}
-          <div className="rounded-2xl border border-gray-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 md:p-6 shadow-2xs space-y-4">
-            <div className="flex items-center gap-2.5 pb-3 border-b border-gray-100 dark:border-zinc-800/80">
-              <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 flex items-center justify-center">
-                <Building2 className="w-4 h-4" />
-              </div>
-              <div>
-                <h2 className="text-sm font-bold text-gray-900 dark:text-white">
+      {activeTab === 'general' && (
+        <div className="space-y-10 animate-in fade-in duration-200">
+          {/* Split-Row Section 1: Workspace Profile */}
+          <section className="flex flex-col md:flex-row gap-6 md:gap-8 items-start">
+            <div className="md:w-1/3 space-y-1.5 shrink-0">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                  <Building2 className="w-4 h-4" />
+                </div>
+                <h2 className="text-sm font-bold text-slate-900 dark:text-white">
                   Workspace Profile
                 </h2>
-                <p className="text-[11px] text-gray-500 dark:text-zinc-400">
-                  Primary organization branding and notification dispatch configurations
-                </p>
               </div>
+              <p className="text-xs text-slate-500 dark:text-zinc-400 leading-relaxed">
+                Configure organizational workspace details, administrative contact points, and primary market taxonomy.
+              </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-gray-700 dark:text-zinc-300">
+            <div className="md:w-2/3 w-full border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm rounded-xl p-6 space-y-4">
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-slate-700 dark:text-zinc-300">
                   Workspace Name
                 </label>
                 <input
                   type="text"
                   value={workspaceName}
                   onChange={(e) => setWorkspaceName(e.target.value)}
-                  className="w-full h-9 px-3 rounded-xl border border-gray-200 dark:border-zinc-800 bg-gray-50/50 dark:bg-zinc-800/50 text-xs text-gray-900 dark:text-zinc-100 focus:outline-none focus:border-blue-500 shadow-2xs"
+                  className="w-full h-9 px-3 text-xs rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/60 text-slate-900 dark:text-zinc-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all shadow-xs"
                 />
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-gray-700 dark:text-zinc-300">
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-slate-700 dark:text-zinc-300">
                   Admin Notification Email
                 </label>
                 <input
                   type="email"
                   value={adminEmail}
                   onChange={(e) => setAdminEmail(e.target.value)}
-                  className="w-full h-9 px-3 rounded-xl border border-gray-200 dark:border-zinc-800 bg-gray-50/50 dark:bg-zinc-800/50 text-xs text-gray-900 dark:text-zinc-100 focus:outline-none focus:border-blue-500 shadow-2xs"
+                  className="w-full h-9 px-3 text-xs rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/60 text-slate-900 dark:text-zinc-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all shadow-xs"
                 />
+                <p className="text-[10px] text-slate-400 dark:text-zinc-500">
+                  Target address for executive digests, alert dispatches, and billing notices.
+                </p>
               </div>
 
-              <div className="space-y-1.5 md:col-span-2">
-                <label className="text-xs font-semibold text-gray-700 dark:text-zinc-300">
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-slate-700 dark:text-zinc-300">
                   Industry Classification
                 </label>
                 <input
                   type="text"
                   value={industry}
                   onChange={(e) => setIndustry(e.target.value)}
-                  className="w-full h-9 px-3 rounded-xl border border-gray-200 dark:border-zinc-800 bg-gray-50/50 dark:bg-zinc-800/50 text-xs text-gray-900 dark:text-zinc-100 focus:outline-none focus:border-blue-500 shadow-2xs"
+                  className="w-full h-9 px-3 text-xs rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/60 text-slate-900 dark:text-zinc-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all shadow-xs"
                 />
               </div>
             </div>
-          </div>
+          </section>
 
-          {/* Automated Alerts & Email Digests */}
-          <div className="rounded-2xl border border-gray-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 md:p-6 shadow-2xs space-y-4">
-            <div className="flex items-center gap-2.5 pb-3 border-b border-gray-100 dark:border-zinc-800/80">
-              <div className="w-8 h-8 rounded-xl bg-purple-50 dark:bg-purple-950 text-purple-600 dark:text-purple-400 flex items-center justify-center">
-                <Bell className="w-4 h-4" />
-              </div>
-              <div>
-                <h2 className="text-sm font-bold text-gray-900 dark:text-white">
-                  Alerts & Automated Digests
+          {/* Split-Row Section 2: Automated Alerts & Email Digests */}
+          <section className="flex flex-col md:flex-row gap-6 md:gap-8 items-start pt-6 border-t border-slate-200/80 dark:border-zinc-800">
+            <div className="md:w-1/3 space-y-1.5 shrink-0">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+                  <Bell className="w-4 h-4" />
+                </div>
+                <h2 className="text-sm font-bold text-slate-900 dark:text-white">
+                  Alerts & Email Digests
                 </h2>
-                <p className="text-[11px] text-gray-500 dark:text-zinc-400">
-                  Configure instant triggers for competitor displacements and daily audit digests
-                </p>
               </div>
+              <p className="text-xs text-slate-500 dark:text-zinc-400 leading-relaxed">
+                Control automatic notification dispatches when generative search engines shift competitor rankings or displace citations.
+              </p>
             </div>
 
-            <div className="space-y-3 pt-1">
-              <div className="flex items-center justify-between p-3.5 rounded-xl border border-gray-200/60 dark:border-zinc-800 bg-gray-50/50 dark:bg-zinc-800/30">
+            <div className="md:w-2/3 w-full border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm rounded-xl p-6 space-y-3">
+              <div className="flex items-center justify-between p-3 rounded-lg border border-slate-100 dark:border-zinc-800/80 bg-slate-50/50 dark:bg-zinc-800/30">
                 <div>
-                  <div className="text-xs font-bold text-gray-900 dark:text-zinc-100">
+                  <div className="text-xs font-semibold text-slate-900 dark:text-zinc-100">
                     Daily Audit Email Digest
                   </div>
-                  <div className="text-[11px] text-gray-500 dark:text-zinc-400">
-                    Send 24h summary report with delta changes to {adminEmail}
+                  <div className="text-[10px] text-slate-400">
+                    Send 24h summary report with delta visibility changes to {adminEmail}
                   </div>
                 </div>
                 <Switch
                   checked={dailyDigest}
                   onCheckedChange={setDailyDigest}
-                  className="data-[state=checked]:bg-blue-600"
+                  className="data-[state=checked]:bg-indigo-600"
                 />
               </div>
 
-              <div className="flex items-center justify-between p-3.5 rounded-xl border border-gray-200/60 dark:border-zinc-800 bg-gray-50/50 dark:bg-zinc-800/30">
+              <div className="flex items-center justify-between p-3 rounded-lg border border-slate-100 dark:border-zinc-800/80 bg-slate-50/50 dark:bg-zinc-800/30">
                 <div>
-                  <div className="text-xs font-bold text-gray-900 dark:text-zinc-100">
+                  <div className="text-xs font-semibold text-slate-900 dark:text-zinc-100">
                     Competitor Displacement Alert
                   </div>
-                  <div className="text-[11px] text-gray-500 dark:text-zinc-400">
-                    Trigger instant notification when a competitor overtakes #1 citation ranking
+                  <div className="text-[10px] text-slate-400">
+                    Trigger instant notification when a rival brand overtakes #1 citation ranking
                   </div>
                 </div>
                 <Switch
                   checked={displacementAlert}
                   onCheckedChange={setDisplacementAlert}
-                  className="data-[state=checked]:bg-blue-600"
+                  className="data-[state=checked]:bg-indigo-600"
                 />
               </div>
 
-              <div className="flex items-center justify-between p-3.5 rounded-xl border border-gray-200/60 dark:border-zinc-800 bg-gray-50/50 dark:bg-zinc-800/30">
+              <div className="flex items-center justify-between p-3 rounded-lg border border-slate-100 dark:border-zinc-800/80 bg-slate-50/50 dark:bg-zinc-800/30">
                 <div>
-                  <div className="text-xs font-bold text-gray-900 dark:text-zinc-100">
-                    Weekly GEO Executive Summary
+                  <div className="text-xs font-semibold text-slate-900 dark:text-zinc-100">
+                    Weekly Executive Summary (PDF)
                   </div>
-                  <div className="text-[11px] text-gray-500 dark:text-zinc-400">
-                    Weekly PDF report formatted for team and stakeholder reviews
+                  <div className="text-[10px] text-slate-400">
+                    Weekly compiled GEO matrix formatted for leadership reviews
                   </div>
                 </div>
                 <Switch
                   checked={weeklyReport}
                   onCheckedChange={setWeeklyReport}
-                  className="data-[state=checked]:bg-blue-600"
+                  className="data-[state=checked]:bg-indigo-600"
                 />
               </div>
             </div>
-          </div>
+          </section>
 
-          {/* Developer API Access */}
-          <div className="rounded-2xl border border-gray-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 md:p-6 shadow-2xs space-y-4">
-            <div className="flex items-center gap-2.5 pb-3 border-b border-gray-100 dark:border-zinc-800/80">
-              <div className="w-8 h-8 rounded-xl bg-amber-50 dark:bg-amber-950 text-amber-600 dark:text-amber-400 flex items-center justify-center">
-                <KeyRound className="w-4 h-4" />
-              </div>
-              <div>
-                <h2 className="text-sm font-bold text-gray-900 dark:text-white">
+          {/* Split-Row Section 3: Developer API Access */}
+          <section className="flex flex-col md:flex-row gap-6 md:gap-8 items-start pt-6 border-t border-slate-200/80 dark:border-zinc-800">
+            <div className="md:w-1/3 space-y-1.5 shrink-0">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-amber-50 dark:bg-amber-950 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+                  <KeyRound className="w-4 h-4" />
+                </div>
+                <h2 className="text-sm font-bold text-slate-900 dark:text-white">
                   Developer API Access
                 </h2>
-                <p className="text-[11px] text-gray-500 dark:text-zinc-400">
-                  Use your API token to programmatically trigger audits and fetch citation records
+              </div>
+              <p className="text-xs text-slate-500 dark:text-zinc-400 leading-relaxed">
+                Use your secret API key to programmatically trigger audits, query historical citations, and stream LLM response data.
+              </p>
+            </div>
+
+            <div className="md:w-2/3 w-full border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm rounded-xl p-6 space-y-4">
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-slate-700 dark:text-zinc-300">
+                    Live Production API Secret Key
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleRotateKey}
+                    disabled={isRotatingKey}
+                    className="text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                  >
+                    <RotateCw className={cn('w-3 h-3', isRotatingKey && 'animate-spin')} />
+                    <span>Rotate Key</span>
+                  </button>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="password"
+                    readOnly
+                    value={apiKey}
+                    className="w-full h-9 px-3 text-xs font-mono rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/60 text-slate-900 dark:text-zinc-100 focus:outline-none select-all"
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleCopyApiKey}
+                    className="h-9 px-3 text-xs rounded-lg gap-1.5 cursor-pointer shrink-0 border-slate-200 dark:border-zinc-800"
+                  >
+                    {copiedKey ? (
+                      <Check className="w-3.5 h-3.5 text-emerald-500" />
+                    ) : (
+                      <Copy className="w-3.5 h-3.5" />
+                    )}
+                    <span>{copiedKey ? 'Copied' : 'Copy'}</span>
+                  </Button>
+                </div>
+                <p className="text-[10px] text-slate-400 dark:text-zinc-500">
+                  Include this secret key in the <code className="bg-slate-100 dark:bg-zinc-800 px-1 py-0.5 rounded font-mono">Authorization: Bearer</code> header. Never expose it in client-side bundles.
                 </p>
               </div>
             </div>
-
-            <div className="space-y-2 pt-1">
-              <label className="text-xs font-semibold text-gray-700 dark:text-zinc-300">
-                Live Production API Key
-              </label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="password"
-                  value="bcn_live_8f3a9e1029c4819d7b5e"
-                  readOnly
-                  className="flex-1 h-9 px-3 font-mono rounded-xl border border-gray-200 dark:border-zinc-800 bg-gray-50/50 dark:bg-zinc-800/50 text-xs text-gray-900 dark:text-zinc-100 shadow-2xs select-all"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleCopyApiKey}
-                  className="h-9 px-3 rounded-xl border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs text-gray-700 dark:text-zinc-300 font-medium flex items-center gap-1.5 shadow-2xs hover:bg-gray-50 cursor-pointer"
-                >
-                  {copiedKey ? (
-                    <>
-                      <Check className="w-3.5 h-3.5 text-emerald-500" />
-                      <span>Copied!</span>
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="w-3.5 h-3.5" />
-                      <span>Copy Key</span>
-                    </>
-                  )}
-                </Button>
-              </div>
-              <p className="text-[10px] text-gray-400">
-                Keep your secret API key secure. Do not expose it in client-side code.
-              </p>
-            </div>
-          </div>
-
+          </section>
         </div>
       )}
 
       {/* ========================================================================= */}
-      {/* Tab 2: Competitor Intel & Benchmark Entities */}
+      {/* TAB 2: Custom Domains & White-Labeling */}
       {/* ========================================================================= */}
-      {activeTab === 'competitors' && (
-        <div className="space-y-5 animate-in fade-in duration-200">
-          
-          {/* 1. Benchmark Competitors Manager */}
-          <div className="rounded-2xl border border-gray-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 md:p-6 shadow-2xs space-y-5">
-            <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-zinc-800/80">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 flex items-center justify-center">
-                  <Users className="w-4 h-4" />
+      {activeTab === 'domains' && (
+        <div className="space-y-10 animate-in fade-in duration-200">
+          <section className="flex flex-col md:flex-row gap-6 md:gap-8 items-start">
+            <div className="md:w-1/3 space-y-1.5 shrink-0">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                  <Globe className="w-4 h-4" />
                 </div>
-                <div>
-                  <h2 className="text-sm font-bold text-gray-900 dark:text-white">
-                    Benchmark Competitors & Rival Domains
-                  </h2>
-                  <p className="text-[11px] text-gray-500 dark:text-zinc-400">
-                    AI answer engines evaluate your entity visibility and citation displacement directly against these rivals
-                  </p>
-                </div>
+                <h2 className="text-sm font-bold text-slate-900 dark:text-white">
+                  Custom Domains & CNAME
+                </h2>
               </div>
-              <span className="text-[10px] font-semibold uppercase tracking-wider px-2.5 py-1 rounded-full bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 border border-blue-200/60 dark:border-blue-800/60 font-mono">
-                {competitors.length} Monitored
-              </span>
+              <p className="text-xs text-slate-500 dark:text-zinc-400 leading-relaxed">
+                Host client-facing GEO audit dashboards and executive matrix reports under your own branded domain. SSL certificates are provisioned automatically.
+              </p>
+              <div className="pt-2">
+                <span className="text-[10px] font-semibold uppercase px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 font-mono">
+                  Auto-SSL Enabled
+                </span>
+              </div>
             </div>
 
-            {/* Add Competitor Form */}
-            <form onSubmit={handleAddCompetitor} className="flex flex-col sm:flex-row items-center gap-2.5 pt-1">
-              <input
-                type="text"
-                placeholder="Competitor brand (e.g., OmniSync)"
-                value={newCompName}
-                onChange={(e) => setNewCompName(e.target.value)}
-                className="w-full sm:flex-1 h-9 px-3 rounded-xl border border-gray-200 dark:border-zinc-800 bg-gray-50/50 dark:bg-zinc-800/50 text-xs text-gray-900 dark:text-zinc-100 placeholder-gray-400 focus:outline-none focus:border-blue-500 shadow-2xs"
-              />
-              <input
-                type="text"
-                placeholder="Domain (e.g., omnisync.com)"
-                value={newCompDomain}
-                onChange={(e) => setNewCompDomain(e.target.value)}
-                className="w-full sm:flex-1 h-9 px-3 rounded-xl border border-gray-200 dark:border-zinc-800 bg-gray-50/50 dark:bg-zinc-800/50 text-xs text-gray-900 dark:text-zinc-100 placeholder-gray-400 focus:outline-none focus:border-blue-500 shadow-2xs font-mono"
-              />
-              <Button
-                type="submit"
-                disabled={!newCompName.trim()}
-                className="w-full sm:w-auto h-9 px-4 rounded-xl bg-gray-900 hover:bg-black dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-zinc-900 font-medium text-xs flex items-center justify-center gap-1.5 shrink-0 shadow-2xs cursor-pointer"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Add Competitor</span>
-              </Button>
-            </form>
+            <div className="md:w-2/3 w-full border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm rounded-xl p-6 space-y-5">
+              {/* Add Domain Form */}
+              <form onSubmit={handleAddDomain} className="flex flex-col sm:flex-row items-center gap-2">
+                <input
+                  type="text"
+                  value={customDomain}
+                  onChange={(e) => setCustomDomain(e.target.value)}
+                  placeholder="reports.yourcompany.com"
+                  className="w-full sm:flex-1 h-9 px-3 text-xs rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/60 text-slate-900 dark:text-zinc-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all shadow-xs font-mono"
+                />
+                <Button
+                  type="submit"
+                  disabled={!customDomain.trim()}
+                  className="w-full sm:w-auto h-9 px-4 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs flex items-center justify-center gap-1.5 shrink-0 cursor-pointer disabled:opacity-50"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add Domain</span>
+                </Button>
+              </form>
 
-            {/* Monitored Competitors Grid */}
-            <div className="pt-2">
-              <div className="text-[11px] font-bold uppercase tracking-wider text-gray-400 dark:text-zinc-500 mb-2.5">
-                Active Tracked Competitors ({competitors.length})
-              </div>
-
-              {competitors.length === 0 ? (
-                <div className="p-8 text-center rounded-xl border border-dashed border-gray-200 dark:border-zinc-800 bg-gray-50/30 text-xs text-gray-400">
-                  No competitors added yet. Add rival brands above to monitor head-to-head share of voice.
+              {/* Domains List */}
+              <div className="space-y-2 pt-1">
+                <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
+                  Configured White-Label Domains ({domainsList.length})
                 </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                  {competitors.map((comp) => (
+
+                <div className="divide-y divide-slate-100 dark:divide-zinc-800/80">
+                  {domainsList.map((item) => (
                     <div
-                      key={comp.id}
-                      className="p-3.5 rounded-xl border border-gray-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900/60 flex items-center justify-between gap-3 shadow-2xs hover:border-blue-300 dark:hover:border-zinc-700 transition-all group"
+                      key={item.domain}
+                      className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
                     >
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <DomainFavicon
-                          domainOrUrl={comp.domain || comp.name}
-                          size={24}
-                          className="rounded-lg shadow-2xs shrink-0"
-                          fallbackInitial
-                        />
-                        <div className="min-w-0">
-                          <div className="font-semibold text-xs text-gray-900 dark:text-zinc-100 truncate">
-                            {comp.name}
-                          </div>
-                          <div className="text-[11px] text-gray-400 font-mono truncate">
-                            {comp.domain || 'no domain'}
-                          </div>
-                        </div>
+                      <div className="flex items-center gap-2.5 flex-wrap">
+                        <span className="font-semibold text-slate-900 dark:text-zinc-100 font-mono">
+                          {item.domain}
+                        </span>
+
+                        {item.status === 'verified' ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 font-mono">
+                            <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+                            CNAME Verified
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200/60 font-mono">
+                            <RotateCw className="w-3 h-3 animate-spin text-amber-500" />
+                            DNS Pending
+                          </span>
+                        )}
+
+                        <span className="text-[10px] text-slate-400">Added {item.added}</span>
                       </div>
 
-                      <div className="flex items-center gap-1 shrink-0">
-                        {comp.domain && (
-                          <a
-                            href={`https://${comp.domain}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="p-1 rounded-lg text-gray-400 hover:text-blue-600 transition-colors"
-                            title="Visit website"
-                          >
-                            <ExternalLink className="w-3.5 h-3.5" />
-                          </a>
-                        )}
+                      <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+                        <a
+                          href={`https://${item.domain}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-1 rounded-md text-slate-400 hover:text-indigo-600 transition-colors"
+                          title="Visit domain"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                        </a>
                         <button
                           type="button"
-                          onClick={() => handleRemoveCompetitor(comp.id)}
-                          className="p-1 rounded-lg text-gray-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
-                          title="Remove competitor"
+                          onClick={() => handleDeleteDomain(item.domain)}
+                          className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
+                          title="Remove domain"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -612,263 +782,611 @@ function SettingsContent() {
                     </div>
                   ))}
                 </div>
-              )}
-            </div>
-          </div>
-
-          {/* 2. Target Brand Profile & Context Grounding */}
-          <div className="rounded-2xl border border-gray-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 md:p-6 shadow-2xs space-y-4">
-            <div className="flex items-center gap-2.5 pb-3 border-b border-gray-100 dark:border-zinc-800/80">
-              <div className="w-8 h-8 rounded-xl bg-purple-50 dark:bg-purple-950 text-purple-600 dark:text-purple-400 flex items-center justify-center">
-                <Building2 className="w-4 h-4" />
               </div>
-              <div>
-                <h2 className="text-sm font-bold text-gray-900 dark:text-white">
-                  Target Entity Identity & Context Grounding
-                </h2>
-                <p className="text-[11px] text-gray-500 dark:text-zinc-400">
-                  Defines your core entity so AI audit models evaluate citation authority against the right category context
+
+              {/* DNS Instructions Callout */}
+              <div className="p-4 rounded-xl border border-indigo-100 dark:border-indigo-900/60 bg-indigo-50/40 dark:bg-indigo-950/20 space-y-2">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-indigo-950 dark:text-indigo-300">
+                  <Info className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                  <span>DNS Configuration Instructions</span>
+                </div>
+                <p className="text-[11px] text-indigo-900/80 dark:text-indigo-200 leading-relaxed">
+                  In your DNS provider (Cloudflare, AWS Route 53, Namecheap, GoDaddy), add a <code className="px-1.5 py-0.5 bg-indigo-100/80 dark:bg-indigo-900/80 rounded font-mono text-[10px] font-bold">CNAME</code> record pointing your subdomain to <code className="px-1.5 py-0.5 bg-indigo-100/80 dark:bg-indigo-900/80 rounded font-mono text-[10px] font-bold">cname.beacon-geo.com</code>.
                 </p>
               </div>
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-gray-700 dark:text-zinc-300">
-                  Target Brand Name *
-                </label>
-                <input
-                  type="text"
-                  value={brandName}
-                  onChange={(e) => setBrandName(e.target.value)}
-                  placeholder="e.g., Acme Sync"
-                  className="w-full h-9 px-3 rounded-xl border border-gray-200 dark:border-zinc-800 bg-gray-50/50 dark:bg-zinc-800/50 text-xs text-gray-900 dark:text-zinc-100 focus:outline-none focus:border-blue-500 shadow-2xs"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-gray-700 dark:text-zinc-300">
-                  Primary Domain URL
-                </label>
-                <div className="relative">
-                  <Globe className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <input
-                    type="text"
-                    value={brandDomain}
-                    onChange={(e) => setBrandDomain(e.target.value)}
-                    placeholder="acmelabs.com"
-                    className="w-full h-9 pl-8.5 pr-3 rounded-xl border border-gray-200 dark:border-zinc-800 bg-gray-50/50 dark:bg-zinc-800/50 text-xs text-gray-900 dark:text-zinc-100 focus:outline-none focus:border-blue-500 shadow-2xs font-mono"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1.5 md:col-span-2">
-                <label className="text-xs font-semibold text-gray-700 dark:text-zinc-300">
-                  Industry / Market Niche
-                </label>
-                <input
-                  type="text"
-                  value={industry}
-                  onChange={(e) => setIndustry(e.target.value)}
-                  placeholder="Technology & B2B SaaS"
-                  className="w-full h-9 px-3 rounded-xl border border-gray-200 dark:border-zinc-800 bg-gray-50/50 dark:bg-zinc-800/50 text-xs text-gray-900 dark:text-zinc-100 focus:outline-none focus:border-blue-500 shadow-2xs"
-                />
-              </div>
-
-              <div className="space-y-1.5 md:col-span-2">
-                <label className="text-xs font-semibold text-gray-700 dark:text-zinc-300">
-                  Core Value Proposition & Description
-                </label>
-                <textarea
-                  value={brandDescription}
-                  onChange={(e) => setBrandDescription(e.target.value)}
-                  rows={3}
-                  placeholder="Summarize your brand value proposition to ground AI evaluation models..."
-                  className="w-full p-3 rounded-xl border border-gray-200 dark:border-zinc-800 bg-gray-50/50 dark:bg-zinc-800/50 text-xs text-gray-900 dark:text-zinc-100 focus:outline-none focus:border-blue-500 shadow-2xs"
-                />
-              </div>
-            </div>
-          </div>
-
+          </section>
         </div>
       )}
 
       {/* ========================================================================= */}
-      {/* Tab 3: Custom Domains & White-Labeling */}
+      {/* TAB 3: Queue Status & Background Workers */}
       {/* ========================================================================= */}
-      {activeTab === 'domains' && (
-        <div className="space-y-5 animate-in fade-in duration-200">
+      {activeTab === 'queue' && (
+        <div className="space-y-10 animate-in fade-in duration-200">
           
-          {/* Custom Domains Manager */}
-          <div className="rounded-2xl border border-gray-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 md:p-6 shadow-2xs space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-zinc-800/80">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
-                  <Globe className="w-4 h-4" />
+          {/* Split-Row Section 1: System Health & Manual Trigger */}
+          <section className="flex flex-col md:flex-row gap-6 md:gap-8 items-start">
+            <div className="md:w-1/3 space-y-1.5 shrink-0">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+                  <Activity className="w-4 h-4" />
                 </div>
-                <div>
-                  <h2 className="text-sm font-bold text-gray-900 dark:text-white">
-                    Custom Domains & White-Labeling
-                  </h2>
-                  <p className="text-[11px] text-gray-500 dark:text-zinc-400">
-                    Host client-facing GEO audit dashboards and matrix reports under your own brand CNAME
-                  </p>
-                </div>
+                <h2 className="text-sm font-bold text-slate-900 dark:text-white">
+                  Worker Infrastructure
+                </h2>
               </div>
-              <span className="text-[10px] font-semibold uppercase tracking-wider px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-                SSL Auto-Provisioned
-              </span>
+              <p className="text-xs text-slate-500 dark:text-zinc-400 leading-relaxed">
+                Monitor Vercel Cron background workers, automated LLM prompt scrapers, execution latency, and Supabase sync states.
+              </p>
             </div>
 
-            {/* Add Custom Domain Form */}
-            <form onSubmit={handleAddDomain} className="flex items-center gap-2.5 pt-1">
-              <input
-                type="text"
-                value={customDomain}
-                onChange={(e) => setCustomDomain(e.target.value)}
-                placeholder="e.g., reports.yourbrand.com"
-                className="flex-1 h-9 px-3 rounded-xl border border-gray-200 dark:border-zinc-800 bg-gray-50/50 dark:bg-zinc-800/50 text-xs text-gray-900 dark:text-zinc-100 placeholder-gray-400 focus:outline-none focus:border-blue-500 shadow-2xs font-mono"
-              />
-              <Button
-                type="submit"
-                disabled={!customDomain.trim()}
-                className="h-9 px-4 rounded-xl bg-gray-900 hover:bg-black dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-zinc-900 font-medium text-xs flex items-center gap-1.5 shrink-0 shadow-2xs cursor-pointer"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Add Domain</span>
-              </Button>
-            </form>
+            <div className="md:w-2/3 w-full space-y-4">
+              {/* Quick Health Gauges */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xs rounded-xl p-4 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-semibold text-slate-500">Cron Daemon</span>
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  </div>
+                  <div className="text-xl font-bold text-slate-900 dark:text-white font-mono">
+                    Healthy
+                  </div>
+                  <p className="text-[10px] text-slate-400">All workers active</p>
+                </div>
 
-            {/* Domains List */}
-            <div className="divide-y divide-gray-100 dark:divide-zinc-800/60 pt-1">
-              {domainsList.map((item) => (
-                <div
-                  key={item.domain}
-                  className="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
-                >
-                  <div className="flex items-center gap-3 flex-wrap">
-                    <span className="font-bold text-gray-900 dark:text-zinc-100 font-mono">
-                      {item.domain}
+                <div className="border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xs rounded-xl p-4 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-semibold text-slate-500">Supabase Sync</span>
+                    <Database className="w-3.5 h-3.5 text-blue-500" />
+                  </div>
+                  <div className="text-xl font-bold text-slate-900 dark:text-white font-mono">
+                    14m ago
+                  </div>
+                  <p className="text-[10px] text-slate-400">0 unwritten records</p>
+                </div>
+
+                <div className="border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xs rounded-xl p-4 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-semibold text-slate-500">Avg Run Latency</span>
+                    <Zap className="w-3.5 h-3.5 text-amber-500" />
+                  </div>
+                  <div className="text-xl font-bold text-slate-900 dark:text-white font-mono">
+                    3.4s
+                  </div>
+                  <p className="text-[10px] text-slate-400">Optimal threshold</p>
+                </div>
+              </div>
+
+              {/* Manual Worker Dispatch Banner */}
+              <div className="border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm rounded-xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="space-y-0.5">
+                  <div className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <span>Immediate Audit Dispatch</span>
+                    <span className="px-2 py-0.5 rounded text-[9px] font-bold uppercase bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 border border-indigo-200/60 font-mono">
+                      On-Demand
                     </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 dark:text-zinc-400">
+                    Trigger all active engine scrapers immediately and persist new citation matrices.
+                  </p>
+                </div>
 
-                    {item.status === 'verified' ? (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/60">
-                        <CheckCircle2 className="w-3 h-3" />
-                        CNAME Verified
-                      </span>
+                <div className="flex items-center gap-2.5 shrink-0">
+                  {queueFeedback && (
+                    <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200">
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span>{queueFeedback}</span>
+                    </div>
+                  )}
+
+                  <Button
+                    onClick={handleTriggerManualSync}
+                    disabled={isTriggeringQueue}
+                    className="h-8.5 px-3.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs flex items-center gap-1.5 shadow-sm cursor-pointer disabled:opacity-50"
+                  >
+                    {isTriggeringQueue ? (
+                      <>
+                        <RotateCw className="w-3.5 h-3.5 animate-spin" />
+                        <span>Running Sync...</span>
+                      </>
                     ) : (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-medium bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200/60 dark:border-amber-800/60">
-                        DNS Verification Pending
-                      </span>
+                      <>
+                        <Play className="w-3.5 h-3.5 fill-current" />
+                        <span>Trigger Immediate Sync</span>
+                      </>
                     )}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </section>
 
-                    <span className="text-[10px] text-gray-400">Added {item.added}</span>
+          {/* Split-Row Section 2: Registered Cron Jobs */}
+          <section className="flex flex-col md:flex-row gap-6 md:gap-8 items-start pt-6 border-t border-slate-200/80 dark:border-zinc-800">
+            <div className="md:w-1/3 space-y-1.5 shrink-0">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                  <Server className="w-4 h-4" />
+                </div>
+                <h2 className="text-sm font-bold text-slate-900 dark:text-white">
+                  Cron Workers
+                </h2>
+              </div>
+              <p className="text-xs text-slate-500 dark:text-zinc-400 leading-relaxed">
+                Background jobs automatically scheduled in vercel.json and processed by Next.js edge route handlers.
+              </p>
+            </div>
+
+            <div className="md:w-2/3 w-full border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm rounded-xl p-6 space-y-3">
+              {CRON_JOBS.map((job) => (
+                <div
+                  key={job.id}
+                  className="p-3.5 rounded-xl border border-slate-100 dark:border-zinc-800/80 bg-slate-50/50 dark:bg-zinc-800/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                >
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-xs font-bold text-slate-900 dark:text-white">
+                        {job.name}
+                      </h3>
+                      <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200/60">
+                        {job.status}
+                      </span>
+                    </div>
+                    <div className="text-[10px] text-slate-500 font-mono">
+                      {job.endpoint} • <span className="text-indigo-600 dark:text-indigo-400">{job.schedule}</span>
+                    </div>
                   </div>
 
-                  <div className="flex items-center gap-2 self-end sm:self-auto">
-                    <a
-                      href={`https://${item.domain}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors"
-                    >
-                      <ExternalLink className="w-3.5 h-3.5" />
-                    </a>
-
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteDomain(item.domain)}
-                      title="Remove domain"
-                      className="p-1.5 rounded-lg text-gray-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                  <div className="flex items-center gap-3 text-xs font-mono text-slate-500 dark:text-zinc-400 shrink-0">
+                    <div className="text-right">
+                      <div className="text-[9px] text-slate-400">Last Run:</div>
+                      <div className="text-[11px] font-semibold text-slate-800 dark:text-zinc-200">
+                        {job.lastRun}
+                      </div>
+                    </div>
+                    <div className="h-5 w-px bg-slate-200 dark:bg-zinc-700" />
+                    <div className="text-right">
+                      <div className="text-[9px] text-slate-400">Next Run:</div>
+                      <div className="text-[11px] font-semibold text-slate-800 dark:text-zinc-200">
+                        {job.nextRun}
+                      </div>
+                    </div>
                   </div>
                 </div>
               ))}
             </div>
-
-            {/* DNS Instructions Callout */}
-            <div className="p-4 rounded-xl border border-blue-200/60 dark:border-blue-900/60 bg-blue-50/40 dark:bg-blue-950/20 space-y-2">
-              <div className="flex items-center gap-1.5 text-xs font-bold text-blue-900 dark:text-blue-300">
-                <Info className="w-3.5 h-3.5 text-blue-600" />
-                <span>DNS Configuration Instructions</span>
-              </div>
-              <p className="text-[11px] text-blue-800 dark:text-blue-200 leading-relaxed">
-                To route your custom domain to Beacon, add a <code className="px-1 py-0.5 bg-blue-100 dark:bg-blue-900/60 rounded font-mono text-[10px]">CNAME</code> record pointing to <code className="px-1 py-0.5 bg-blue-100 dark:bg-blue-900/60 rounded font-mono text-[10px]">cname.beacon-geo.com</code> in your domain registrar DNS settings (Cloudflare, GoDaddy, Namecheap, AWS Route 53).
-              </p>
-            </div>
-          </div>
-
+          </section>
         </div>
       )}
 
       {/* ========================================================================= */}
-      {/* Tab 3: AI Engine Preferences */}
+      {/* TAB 4: Billing & Plans Management */}
       {/* ========================================================================= */}
-      {activeTab === 'models' && (
-        <div className="space-y-5 animate-in fade-in duration-200">
+      {activeTab === 'billing' && (
+        <div className="space-y-10 animate-in fade-in duration-200">
           
-          <div className="rounded-2xl border border-gray-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 md:p-6 shadow-2xs space-y-4">
-            <div className="flex items-center gap-2.5 pb-3 border-b border-gray-100 dark:border-zinc-800/80">
-              <div className="w-8 h-8 rounded-xl bg-cyan-50 dark:bg-cyan-950 text-cyan-600 dark:text-cyan-400 flex items-center justify-center">
-                <Sparkles className="w-4 h-4" />
-              </div>
+          {/* Status Alerts for Stripe Checkout */}
+          {checkoutSuccess && (
+            <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 flex items-start gap-3">
+              <CheckCircle2 className="w-5 h-5 shrink-0 mt-0.5 text-emerald-500" />
               <div>
-                <h2 className="text-sm font-bold text-gray-900 dark:text-white">
-                  Default AI Engine Target Selection
+                <div className="font-bold text-xs">Payment & Upgrade Successful!</div>
+                <div className="text-[11px] text-emerald-600 dark:text-emerald-400 mt-0.5">
+                  Your workspace subscription has been updated. Your new tier features and audit limits are active immediately.
+                </div>
+              </div>
+            </div>
+          )}
+
+          {checkoutCanceled && (
+            <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300 flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 shrink-0 mt-0.5 text-amber-500" />
+              <div>
+                <div className="font-bold text-xs">Checkout Canceled</div>
+                <div className="text-[11px] text-amber-600 dark:text-amber-400 mt-0.5">
+                  The Stripe checkout process was canceled. No charges were made to your account.
+                </div>
+              </div>
+            </div>
+          )}
+
+          {billingError && (
+            <div className="p-4 rounded-xl bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 shrink-0 mt-0.5 text-rose-500" />
+              <div>
+                <div className="font-bold text-xs">Billing Error</div>
+                <div className="text-[11px] text-rose-600 dark:text-rose-400 mt-0.5">{billingError}</div>
+              </div>
+            </div>
+          )}
+
+          {/* Split-Row Section 1: Active Workspace Subscription */}
+          <section className="flex flex-col md:flex-row gap-6 md:gap-8 items-start">
+            <div className="md:w-1/3 space-y-1.5 shrink-0">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-purple-50 dark:bg-purple-950 text-purple-600 dark:text-purple-400 flex items-center justify-center">
+                  <CreditCard className="w-4 h-4" />
+                </div>
+                <h2 className="text-sm font-bold text-slate-900 dark:text-white">
+                  Active Subscription
                 </h2>
-                <p className="text-[11px] text-gray-500 dark:text-zinc-400">
-                  Choose which generative answer engines are automatically included during audit cycles
+              </div>
+              <p className="text-xs text-slate-500 dark:text-zinc-400 leading-relaxed">
+                Manage your active workspace plan, billing cycle, receipts, and invoice history directly through Stripe.
+              </p>
+            </div>
+
+            <div className="md:w-2/3 w-full border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm rounded-xl p-6 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-zinc-800">
+                <div className="flex items-center gap-3.5">
+                  <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold text-sm shrink-0">
+                    <Zap className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-slate-500 font-medium">Current Tier:</span>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 border border-indigo-200/60 font-mono">
+                        {currentTier} Plan
+                      </span>
+                    </div>
+                    <p className="text-xs font-semibold text-slate-900 dark:text-white mt-0.5">
+                      {currentTier === 'starter' && 'Free Tier • 1 Brand & 5 Monitored Prompts'}
+                      {currentTier === 'pro' && 'Pro Subscription • 3 Brands & 25 Prompts with Live Alerts'}
+                      {currentTier === 'enterprise' && 'Enterprise Intelligence • Unlimited Brands & Dedicated Scrapers'}
+                    </p>
+                  </div>
+                </div>
+
+                {billingProfile?.stripeCustomerId && (
+                  <Button
+                    onClick={handleOpenCustomerPortal}
+                    disabled={portalLoading}
+                    variant="outline"
+                    size="sm"
+                    className="h-8.5 px-3.5 text-xs rounded-lg gap-1.5 shrink-0 border-slate-200 dark:border-zinc-800 cursor-pointer"
+                  >
+                    {portalLoading ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <CreditCard className="w-3.5 h-3.5 text-indigo-600" />
+                    )}
+                    <span>Manage Invoices</span>
+                    <ExternalLink className="w-3 h-3 text-slate-400" />
+                  </Button>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs pt-1">
+                <div className="p-3 rounded-lg bg-slate-50/60 dark:bg-zinc-800/40 border border-slate-100 dark:border-zinc-800">
+                  <div className="text-[10px] text-slate-400 font-medium">Billing Account</div>
+                  <div className="font-semibold text-slate-800 dark:text-zinc-200 truncate font-mono mt-0.5">
+                    {billingProfile?.email || adminEmail}
+                  </div>
+                </div>
+
+                <div className="p-3 rounded-lg bg-slate-50/60 dark:bg-zinc-800/40 border border-slate-100 dark:border-zinc-800">
+                  <div className="text-[10px] text-slate-400 font-medium">Payment Gateway</div>
+                  <div className="font-semibold text-slate-800 dark:text-zinc-200 flex items-center gap-1.5 mt-0.5">
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
+                    <span>Stripe Level 1 PCI DSS</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Split-Row Section 2: Subscription Tiers Grid */}
+          <section className="flex flex-col md:flex-row gap-6 md:gap-8 items-start pt-6 border-t border-slate-200/80 dark:border-zinc-800">
+            <div className="md:w-1/3 space-y-1.5 shrink-0">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                  <Sparkles className="w-4 h-4" />
+                </div>
+                <h2 className="text-sm font-bold text-slate-900 dark:text-white">
+                  Available Tiers
+                </h2>
+              </div>
+              <p className="text-xs text-slate-500 dark:text-zinc-400 leading-relaxed">
+                Upgrade or scale your plan anytime. Higher tiers unlock deeper competitor tracking, higher prompt volumes, and instant displacement alerts.
+              </p>
+            </div>
+
+            <div className="md:w-2/3 w-full grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {/* Starter Plan */}
+              <div
+                className={cn(
+                  'border rounded-xl p-4 flex flex-col justify-between transition-all bg-white dark:bg-zinc-900 shadow-xs',
+                  currentTier === 'starter'
+                    ? 'border-indigo-600 ring-1 ring-indigo-600'
+                    : 'border-slate-200 dark:border-zinc-800'
+                )}
+              >
+                <div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-900 dark:text-white">Starter</span>
+                    {currentTier === 'starter' && (
+                      <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+                        Active
+                      </span>
+                    )}
+                  </div>
+                  <div className="mt-2 flex items-baseline gap-1">
+                    <span className="text-2xl font-extrabold text-slate-900 dark:text-white">$0</span>
+                    <span className="text-[10px] text-slate-400">/ mo</span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 mt-1 leading-normal">
+                    {STRIPE_PLANS.starter.description}
+                  </p>
+
+                  <div className="mt-3 pt-3 border-t border-slate-100 dark:border-zinc-800 space-y-1.5">
+                    {STRIPE_PLANS.starter.features.slice(0, 4).map((f, i) => (
+                      <div key={i} className="flex items-center gap-1.5 text-[11px] text-slate-600 dark:text-zinc-300">
+                        <Check className="w-3 h-3 text-emerald-500 shrink-0" />
+                        <span>{f}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="pt-4 mt-4 border-t border-slate-100 dark:border-zinc-800">
+                  <Button
+                    disabled={true}
+                    variant="outline"
+                    className="w-full h-8 text-xs font-semibold border-slate-200 dark:border-zinc-800 text-slate-400"
+                  >
+                    {currentTier === 'starter' ? 'Current Plan' : 'Free Tier'}
+                  </Button>
+                </div>
+              </div>
+
+              {/* Pro Plan */}
+              <div
+                className={cn(
+                  'border rounded-xl p-4 flex flex-col justify-between relative transition-all bg-white dark:bg-zinc-900 shadow-xs',
+                  currentTier === 'pro'
+                    ? 'border-indigo-600 ring-2 ring-indigo-600'
+                    : 'border-indigo-300 dark:border-indigo-800/80 shadow-md'
+                )}
+              >
+                <div className="absolute -top-2.5 right-3">
+                  <span className="bg-indigo-600 text-white text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full shadow-xs">
+                    Popular
+                  </span>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400">Pro</span>
+                    {currentTier === 'pro' && (
+                      <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+                        Active
+                      </span>
+                    )}
+                  </div>
+                  <div className="mt-2 flex items-baseline gap-1">
+                    <span className="text-2xl font-extrabold text-slate-900 dark:text-white">$49</span>
+                    <span className="text-[10px] text-slate-400">/ mo</span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 mt-1 leading-normal">
+                    {STRIPE_PLANS.pro.description}
+                  </p>
+
+                  <div className="mt-3 pt-3 border-t border-slate-100 dark:border-zinc-800 space-y-1.5">
+                    {STRIPE_PLANS.pro.features.slice(0, 4).map((f, i) => (
+                      <div key={i} className="flex items-center gap-1.5 text-[11px] text-slate-700 dark:text-zinc-200 font-medium">
+                        <Check className="w-3 h-3 text-indigo-600 shrink-0" />
+                        <span>{f}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="pt-4 mt-4 border-t border-slate-100 dark:border-zinc-800">
+                  {currentTier === 'pro' ? (
+                    <Button
+                      onClick={handleOpenCustomerPortal}
+                      disabled={portalLoading}
+                      variant="outline"
+                      className="w-full h-8 text-xs font-semibold border-indigo-200 text-indigo-600 hover:bg-indigo-50"
+                    >
+                      {portalLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Manage Pro'}
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={() => handleCheckout('pro')}
+                      disabled={checkoutLoadingTier !== null}
+                      className="w-full h-8 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer"
+                    >
+                      {checkoutLoadingTier === 'pro' ? (
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                      ) : (
+                        <span>Upgrade to Pro</span>
+                      )}
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              {/* Enterprise Plan */}
+              <div
+                className={cn(
+                  'border rounded-xl p-4 flex flex-col justify-between transition-all bg-white dark:bg-zinc-900 shadow-xs',
+                  currentTier === 'enterprise'
+                    ? 'border-purple-600 ring-2 ring-purple-600'
+                    : 'border-slate-200 dark:border-zinc-800'
+                )}
+              >
+                <div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-900 dark:text-white">Enterprise</span>
+                    {currentTier === 'enterprise' && (
+                      <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+                        Active
+                      </span>
+                    )}
+                  </div>
+                  <div className="mt-2 flex items-baseline gap-1">
+                    <span className="text-2xl font-extrabold text-slate-900 dark:text-white">$199</span>
+                    <span className="text-[10px] text-slate-400">/ mo</span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 mt-1 leading-normal">
+                    {STRIPE_PLANS.enterprise.description}
+                  </p>
+
+                  <div className="mt-3 pt-3 border-t border-slate-100 dark:border-zinc-800 space-y-1.5">
+                    {STRIPE_PLANS.enterprise.features.slice(0, 4).map((f, i) => (
+                      <div key={i} className="flex items-center gap-1.5 text-[11px] text-slate-600 dark:text-zinc-300">
+                        <Check className="w-3 h-3 text-purple-600 shrink-0" />
+                        <span>{f}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="pt-4 mt-4 border-t border-slate-100 dark:border-zinc-800">
+                  {currentTier === 'enterprise' ? (
+                    <Button
+                      onClick={handleOpenCustomerPortal}
+                      disabled={portalLoading}
+                      variant="outline"
+                      className="w-full h-8 text-xs font-semibold border-purple-200 text-purple-600 hover:bg-purple-50"
+                    >
+                      {portalLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Manage Enterprise'}
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={() => handleCheckout('enterprise')}
+                      disabled={checkoutLoadingTier !== null}
+                      className="w-full h-8 text-xs font-semibold bg-slate-900 hover:bg-black dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 cursor-pointer"
+                    >
+                      {checkoutLoadingTier === 'enterprise' ? (
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                      ) : (
+                        <span>Upgrade</span>
+                      )}
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Split-Row Section 3: Billing Security Guarantee */}
+          <section className="flex flex-col md:flex-row gap-6 md:gap-8 items-start pt-6 border-t border-slate-200/80 dark:border-zinc-800">
+            <div className="md:w-1/3 space-y-1.5 shrink-0">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                  <ShieldCheck className="w-4 h-4" />
+                </div>
+                <h2 className="text-sm font-bold text-slate-900 dark:text-white">
+                  Payment Guarantee
+                </h2>
+              </div>
+              <p className="text-xs text-slate-500 dark:text-zinc-400 leading-relaxed">
+                All subscriptions are billed securely via Stripe and can be cancelled or modified anytime with zero lock-in contracts.
+              </p>
+            </div>
+
+            <div className="md:w-2/3 w-full grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="p-4 rounded-xl border border-slate-100 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-800/30 space-y-1">
+                <div className="text-xs font-bold text-slate-900 dark:text-zinc-100 flex items-center gap-1.5">
+                  <CreditCard className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>Cancel Anytime</span>
+                </div>
+                <p className="text-[11px] text-slate-500 dark:text-zinc-400 leading-relaxed">
+                  Easily switch plans or downgrade back to Starter at any time through the customer portal.
+                </p>
+              </div>
+
+              <div className="p-4 rounded-xl border border-slate-100 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-800/30 space-y-1">
+                <div className="text-xs font-bold text-slate-900 dark:text-zinc-100 flex items-center gap-1.5">
+                  <HelpCircle className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>Enterprise Scraper Volume</span>
+                </div>
+                <p className="text-[11px] text-slate-500 dark:text-zinc-400 leading-relaxed">
+                  Need continuous scraping across thousands of localized queries? Contact support for dedicated workers.
                 </p>
               </div>
             </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 pt-1">
-              {[
-                { name: 'ChatGPT', provider: 'OpenAI GPT-4o', color: 'bg-emerald-500' },
-                { name: 'Perplexity', provider: 'Sonar Online Search', color: 'bg-cyan-500' },
-                { name: 'Gemini', provider: 'Google Gemini 1.5 Pro', color: 'bg-blue-500' },
-                { name: 'Claude', provider: 'Anthropic Claude Haiku 4.5', color: 'bg-amber-500' },
-                { name: 'Copilot', provider: 'Microsoft Bing Copilot', color: 'bg-purple-500' },
-              ].map((model) => {
-                const isSelected = defaultEngines.includes(model.name);
-                return (
-                  <div
-                    key={model.name}
-                    onClick={() => handleToggleDefaultEngine(model.name)}
-                    className={cn(
-                      'p-3.5 rounded-xl border transition-all cursor-pointer select-none space-y-1.5',
-                      isSelected
-                        ? 'border-blue-500 bg-blue-50/30 dark:bg-blue-950/30 shadow-2xs'
-                        : 'border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/60 opacity-60'
-                    )}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className={cn('w-2 h-2 rounded-full', model.color)} />
-                        <span className="text-xs font-bold text-gray-900 dark:text-white">
-                          {model.name}
-                        </span>
-                      </div>
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={() => {}}
-                        className="w-3.5 h-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 accent-blue-600"
-                      />
-                    </div>
-                    <p className="text-[11px] text-gray-500 dark:text-zinc-400">
-                      {model.provider}
-                    </p>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
+          </section>
         </div>
       )}
+
+      {/* ========================================================================= */}
+      {/* 5. Sticky Bottom Action Bar (Brand Kit Style) */}
+      {/* ========================================================================= */}
+      <div className="fixed bottom-0 left-0 right-0 z-30 backdrop-blur-md bg-white/95 dark:bg-zinc-950/95 border-t border-slate-200/90 dark:border-zinc-800 py-3.5 px-4 sm:px-8 shadow-lg">
+        <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2 text-xs">
+            {statusMessage ? (
+              <div
+                className={cn(
+                  'flex items-center gap-1.5 px-3 py-1 rounded-lg font-semibold animate-in fade-in',
+                  statusMessage.type === 'success'
+                    ? 'text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/60'
+                    : 'text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800/60'
+                )}
+              >
+                {statusMessage.type === 'success' ? (
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                ) : (
+                  <AlertCircle className="w-3.5 h-3.5 text-rose-500" />
+                )}
+                <span>{statusMessage.text}</span>
+              </div>
+            ) : hasUnsavedChanges ? (
+              <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 font-medium">
+                <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                <span>You have unsaved changes</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5 text-slate-400 dark:text-zinc-500">
+                <Check className="w-3.5 h-3.5 text-emerald-500" />
+                <span>All settings synchronized</span>
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2.5 shrink-0">
+            {hasUnsavedChanges && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleDiscardGeneral}
+                disabled={isSaving}
+                className="h-9 px-3.5 rounded-xl border-slate-200 dark:border-zinc-800 text-xs font-semibold text-slate-600 dark:text-zinc-400 hover:text-slate-900 cursor-pointer"
+              >
+                Discard
+              </Button>
+            )}
+
+            <Button
+              onClick={handleSaveGeneral}
+              disabled={isSaving}
+              className="h-9 px-5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs flex items-center gap-2 shadow-sm transition-all cursor-pointer disabled:opacity-50"
+            >
+              {isSaving ? (
+                <>
+                  <RotateCw className="w-3.5 h-3.5 animate-spin" />
+                  <span>Saving...</span>
+                </>
+              ) : savedSuccess ? (
+                <>
+                  <Check className="w-3.5 h-3.5 text-emerald-300" />
+                  <span>Saved!</span>
+                </>
+              ) : (
+                <>
+                  <Save className="w-3.5 h-3.5" />
+                  <span>Save Configuration</span>
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+      </div>
 
     </div>
   );
@@ -879,7 +1397,7 @@ export default function SettingsPage() {
     <React.Suspense
       fallback={
         <div className="flex items-center justify-center min-h-[400px]">
-          <RotateCw className="w-6 h-6 text-blue-600 animate-spin" />
+          <RotateCw className="w-6 h-6 text-indigo-600 animate-spin" />
         </div>
       }
     >

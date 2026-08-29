@@ -19,7 +19,6 @@ import {
   CheckCircle2,
   Sliders,
   Settings,
-  Puzzle,
   Activity,
   CreditCard,
 } from 'lucide-react';
@@ -72,20 +71,7 @@ const NAV_SECTIONS: NavSection[] = [
     title: 'Configuration',
     items: [
       { name: 'Brand Kit', href: '/brand-kit', icon: Building2 },
-      { name: 'Integrations', href: '/integrations', icon: Puzzle },
       { name: 'Settings', href: '/settings', icon: Settings },
-    ],
-  },
-  {
-    title: 'System',
-    items: [
-      { name: 'Queue Status', href: '/queue', icon: Activity },
-    ],
-  },
-  {
-    title: 'Account',
-    items: [
-      { name: 'Billing', href: '/billing', icon: CreditCard },
     ],
   },
 ];
