@@ -11,10 +11,11 @@ import {
   Download,
   Share2,
   CheckCircle2,
+  ExternalLink,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { AuditReportDocument } from '@/components/reports/AuditReportDocument';
+import { ExecutiveAuditDocument } from '@/components/reports/ExecutiveAuditDocument';
 import { GeneratedAuditReport } from '@/app/api/reports/generate/route';
 
 interface ReportPageProps {
@@ -25,22 +26,29 @@ export default function DedicatedReportPage({ params }: ReportPageProps) {
   const { targetId } = params;
   const router = useRouter();
   const searchParams = useSearchParams();
+  const auditId = searchParams.get('auditId') || searchParams.get('id');
   const autoPrint = searchParams.get('autoPrint') === 'true' || searchParams.get('print') === 'true';
 
   const [report, setReport] = React.useState<GeneratedAuditReport | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [isRegenerating, setIsRegenerating] = React.useState(false);
+  const [isExportingPdf, setIsExportingPdf] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
-  const fetchReport = React.useCallback(async () => {
+  const fetchReport = React.useCallback(async (forceFresh: boolean = false) => {
     try {
       setIsLoading(true);
       setError(null);
 
+      const payload: { targetId?: string; auditId?: string } = { targetId };
+      if (auditId && !forceFresh) {
+        payload.auditId = auditId;
+      }
+
       const response = await fetch('/api/reports/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ targetId }),
+        body: JSON.stringify(payload),
       });
 
       const data = await response.json();
@@ -55,7 +63,7 @@ export default function DedicatedReportPage({ params }: ReportPageProps) {
     } finally {
       setIsLoading(false);
     }
-  }, [targetId]);
+  }, [targetId, auditId]);
 
   React.useEffect(() => {
     fetchReport();
@@ -77,8 +85,16 @@ export default function DedicatedReportPage({ params }: ReportPageProps) {
 
   const handleRegenerate = async () => {
     setIsRegenerating(true);
-    await fetchReport();
+    await fetchReport(true);
     setIsRegenerating(false);
+  };
+
+  const handleDownloadServerlessPdf = () => {
+    if (!report?.id) return;
+    setIsExportingPdf(true);
+    const exportUrl = `/api/export?id=${report.id}`;
+    window.open(exportUrl, '_blank');
+    setTimeout(() => setIsExportingPdf(false), 2000);
   };
 
   return (
@@ -92,7 +108,7 @@ export default function DedicatedReportPage({ params }: ReportPageProps) {
             variant="outline"
             size="sm"
             asChild
-            className="rounded-xl border-slate-200 dark:border-zinc-700 hover:bg-slate-50 dark:hover:bg-zinc-800 gap-1.5"
+            className="rounded-xl border-slate-200 dark:border-zinc-700 hover:bg-slate-50 dark:hover:bg-zinc-800 gap-1.5 cursor-pointer"
           >
             <Link href="/dashboard">
               <ArrowLeft className="w-4 h-4" />
@@ -106,25 +122,36 @@ export default function DedicatedReportPage({ params }: ReportPageProps) {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Button
             variant="outline"
             size="sm"
             onClick={handleRegenerate}
             disabled={isLoading || isRegenerating}
-            className="rounded-xl border-slate-200 dark:border-zinc-700 hover:bg-slate-50 dark:hover:bg-zinc-800 gap-1.5"
+            className="rounded-xl border-slate-200 dark:border-zinc-700 hover:bg-slate-50 dark:hover:bg-zinc-800 gap-1.5 cursor-pointer"
           >
             <RotateCw className={cn('w-4 h-4', isRegenerating && 'animate-spin text-indigo-600')} />
-            <span>{isRegenerating ? 'Analyzing...' : 'Refresh'}</span>
+            <span>{isRegenerating ? 'Analyzing...' : 'New Snapshot'}</span>
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleDownloadServerlessPdf}
+            disabled={isLoading || !report || isExportingPdf}
+            className="rounded-xl border-slate-200 dark:border-zinc-700 hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-300 gap-1.5 cursor-pointer"
+          >
+            <Download className={cn('w-4 h-4', isExportingPdf && 'animate-bounce text-indigo-600')} />
+            <span>{isExportingPdf ? 'Exporting PDF...' : 'Serverless PDF'}</span>
           </Button>
 
           <Button
             onClick={handlePrint}
             disabled={isLoading || !report}
-            className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold gap-1.5 shadow-md shadow-indigo-600/20"
+            className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold gap-1.5 shadow-md shadow-indigo-600/20 cursor-pointer"
           >
             <Printer className="w-4 h-4" />
-            <span>Print / Save PDF</span>
+            <span>Print View</span>
           </Button>
         </div>
       </header>
@@ -156,12 +183,12 @@ export default function DedicatedReportPage({ params }: ReportPageProps) {
               Unable to generate report
             </h3>
             <p className="text-xs text-slate-500 dark:text-zinc-400 max-w-md">{error}</p>
-            <Button onClick={fetchReport} className="mt-2 rounded-xl bg-indigo-600 text-white">
+            <Button onClick={() => fetchReport(true)} className="mt-2 rounded-xl bg-indigo-600 text-white">
               Retry Generation
             </Button>
           </div>
         ) : report ? (
-          <AuditReportDocument report={report} />
+          <ExecutiveAuditDocument report={report} />
         ) : null}
       </main>
     </div>

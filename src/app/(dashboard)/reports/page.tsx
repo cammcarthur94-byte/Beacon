@@ -27,11 +27,10 @@ import {
   ArrowUpRight,
   Shield,
   Layers,
-  Calendar,
+  Download,
   RotateCw,
-  ExternalLink,
-  ChevronRight,
   Radio,
+  ExternalLink,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -43,6 +42,7 @@ import Link from 'next/link';
 export default function ReportsPage() {
   const [data, setData] = React.useState<ReportsData | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
+  const [isExportingPdf, setIsExportingPdf] = React.useState(false);
 
   const loadData = React.useCallback(async () => {
     try {
@@ -62,6 +62,24 @@ export default function ReportsPage() {
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const handleDownloadServerlessPdf = async () => {
+    try {
+      setIsExportingPdf(true);
+      const res = await fetch('/api/reports/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetId: 'default' }),
+      });
+      const resData = await res.json();
+      const snapshotId = resData.report?.id || 'a0000000-0000-0000-0000-000000000001';
+      window.open(`/api/export?id=${snapshotId}`, '_blank');
+    } catch (e) {
+      window.open('/api/export', '_blank');
+    } finally {
+      setIsExportingPdf(false);
+    }
   };
 
   if (isLoading || !data) {
@@ -146,15 +164,16 @@ export default function ReportsPage() {
             <span className="hidden sm:inline">Refresh</span>
           </Button>
 
-          <a
-            href="/api/export"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="h-9 px-3.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-300 text-xs font-semibold flex items-center gap-1.5 shadow-2xs transition-colors"
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleDownloadServerlessPdf}
+            disabled={isExportingPdf}
+            className="h-9 px-3.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-300 text-xs font-semibold flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
           >
-            <ExternalLink className="w-3.5 h-3.5" />
-            <span>Serverless PDF</span>
-          </a>
+            <Download className={cn('w-3.5 h-3.5', isExportingPdf && 'animate-bounce text-indigo-600')} />
+            <span>{isExportingPdf ? 'Exporting PDF...' : 'Serverless PDF'}</span>
+          </Button>
 
           <Button
             onClick={handlePrint}
