@@ -175,6 +175,19 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
     citations = citRows || [];
   }
 
+  // Performance Optimization: Pre-index responses and pre-group citations into Map lookups.
+  // Reduces data aggregation time complexity from O(C * R) to O(C + R).
+  const responseMap = new Map<string, (typeof responses)[number]>();
+  responses.forEach((r) => responseMap.set(r.id, r));
+
+  const citationsByResponseId = new Map<string, any[]>();
+  citations.forEach((c) => {
+    if (!citationsByResponseId.has(c.response_id)) {
+      citationsByResponseId.set(c.response_id, []);
+    }
+    citationsByResponseId.get(c.response_id)!.push(c);
+  });
+
   // Calculate Overall Score (Average visibility_score across all completed responses)
   const validScores = responses
     .map((r) => (typeof r.visibility_score === 'number' ? r.visibility_score : null))
@@ -274,9 +287,11 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
       ? Math.round((mentionedCount / engResponses.length) * 1000) / 10
       : 0;
 
-    // Citations count for this engine
-    const engRespIds = new Set(engResponses.map((r) => r.id));
-    const engCitCount = citations.filter((c) => engRespIds.has(c.response_id)).length;
+    // Citations count for this engine using O(1) map lookups
+    let engCitCount = 0;
+    engResponses.forEach((r) => {
+      engCitCount += citationsByResponseId.get(r.id)?.length || 0;
+    });
 
     const avgRank = avgScore >= 90 ? 1.2 : avgScore >= 75 ? 1.8 : avgScore >= 50 ? 2.5 : 3.5;
 
@@ -326,8 +341,8 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
     if (cit.is_target_brand) item.isTargetBrand = true;
     if (cit.sentiment) item.sentiments.push(cit.sentiment);
 
-    // Find engine for this citation
-    const resp = responses.find((r) => r.id === cit.response_id);
+    // Find engine for this citation using O(1) responseMap lookup
+    const resp = responseMap.get(cit.response_id);
     if (resp) {
       const eng = (resp.engine_name || resp.engine || '').toLowerCase() as AIEngine;
       if (eng) item.engines.add(eng);
@@ -372,7 +387,7 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
     .map((resp, idx) => {
       const promptText = runPromptMap.get(resp.run_id) || 'Active Target Prompt';
       const eng = (resp.engine_name || resp.engine || 'chatgpt').toLowerCase() as AIEngine;
-      const respCits = citations.filter((c) => c.response_id === resp.id).length;
+      const respCits = citationsByResponseId.get(resp.id)?.length || 0;
       const score = resp.visibility_score || 0;
       const impact = score >= 75 ? '+5.0%' : score >= 50 ? '+2.4%' : '0.0%';
 
