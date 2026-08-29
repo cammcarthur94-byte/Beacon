@@ -10,7 +10,9 @@
     "test:preflight": "tsx scripts/verify-preflight.ts"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^4.0.45",
     "@ai-sdk/google": "^4.0.57",
+    "@ai-sdk/openai": "^4.0.51",
     "@anthropic-ai/sdk": "^0.121.0",
     "@google/generative-ai": "^0.24.1",
     "@radix-ui/react-dialog": "^1.1.2",

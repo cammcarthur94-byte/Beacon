@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { generateObject } from 'ai';
-import { google } from '@ai-sdk/google';
+import { createGoogleGenerativeAI } from '@ai-sdk/google';
+import { createOpenAI } from '@ai-sdk/openai';
 import { z } from 'zod';
 
 export const dynamic = 'force-dynamic';
@@ -32,7 +33,7 @@ export async function POST(req: NextRequest) {
 async function handleGenerateReports(req: NextRequest) {
   const startTime = Date.now();
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || 'https://placeholder.supabase.co';
   const supabaseServiceKey =
     process.env.SUPABASE_SERVICE_ROLE_KEY ||
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
@@ -43,16 +44,22 @@ async function handleGenerateReports(req: NextRequest) {
   });
 
   try {
-    // 1. Fetch active brands/workspaces
+    // 1. Fetch active brands/workspaces (using brand_name column)
     let workspaces: Array<{ id: string; name: string; domain: string; primary_color?: string; logo_url?: string }> = [];
 
     const { data: brandData, error: brandErr } = await supabase
       .from('brands')
-      .select('id, name, domain, primary_color, logo_url')
+      .select('id, brand_name, domain, primary_color, logo_url')
       .limit(10);
 
     if (!brandErr && brandData && brandData.length > 0) {
-      workspaces = brandData;
+      workspaces = brandData.map((b) => ({
+        id: b.id,
+        name: b.brand_name || 'Acme Sync',
+        domain: b.domain || 'acmelabs.com',
+        primary_color: b.primary_color || '#4f46e5',
+        logo_url: b.logo_url || '',
+      }));
     } else {
       // Default fallback workspace for generation
       workspaces = [
@@ -114,28 +121,50 @@ async function handleGenerateReports(req: NextRequest) {
         console.warn('Using baseline metrics for workspace:', ws.name);
       }
 
-      // 3. Generate structured AI narrative using Vercel AI SDK with Gemini 1.5 Pro
-      let narrative: z.infer<typeof ReportNarrativeSchema>;
+      // 3. Generate structured AI narrative using Vercel AI SDK with multi-provider cascade
+      let narrative: z.infer<typeof ReportNarrativeSchema> | null = null;
 
-      const hasGoogleKey = !!(process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY);
+      const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+      const openaiKey = process.env.OPENAI_API_KEY;
 
-      if (hasGoogleKey) {
-        try {
-          const { object } = await generateObject({
-            model: google('gemini-1.5-pro'),
-            schema: ReportNarrativeSchema,
-            prompt: `You are an expert Generative Engine Optimization (GEO) analyst. Analyze the following 7-day visibility and citation metrics for the brand "${ws.name}" (${ws.domain}):
+      const promptText = `You are an expert Generative Engine Optimization (GEO) analyst. Analyze the following 7-day visibility and citation metrics for the brand "${ws.name}" (${ws.domain}):
 Metrics:
 ${JSON.stringify(rawMetrics, null, 2)}
 
-Provide an executive summary, critical areas of concern (missing citations or model-specific lagging), and actionable technical recommendations to improve citations across ChatGPT, Perplexity, Gemini, Claude, and Copilot.`,
+Provide a concise executive summary, critical areas of concern (missing citations or model-specific lagging), and actionable technical recommendations to improve citations across ChatGPT, Perplexity, Gemini, Claude, and Copilot.`;
+
+      // Try Gemini Provider
+      if (geminiKey && !narrative) {
+        try {
+          const googleProvider = createGoogleGenerativeAI({ apiKey: geminiKey });
+          const { object } = await generateObject({
+            model: googleProvider('gemini-1.5-pro'),
+            schema: ReportNarrativeSchema,
+            prompt: promptText,
           });
           narrative = object;
         } catch (aiErr) {
-          console.warn('AI SDK generation failed, using intelligent analytical fallback:', aiErr);
-          narrative = createFallbackNarrative(ws.name, ws.domain, rawMetrics);
+          console.warn('Gemini AI generation failed, checking secondary providers...');
         }
-      } else {
+      }
+
+      // Try OpenAI Provider Fallback
+      if (openaiKey && !narrative) {
+        try {
+          const openaiProvider = createOpenAI({ apiKey: openaiKey });
+          const { object } = await generateObject({
+            model: openaiProvider('gpt-4o-mini'),
+            schema: ReportNarrativeSchema,
+            prompt: promptText,
+          });
+          narrative = object;
+        } catch (openaiErr) {
+          console.warn('OpenAI AI generation failed, using intelligent analytical fallback...');
+        }
+      }
+
+      // Built-in Deterministic GEO Fallback
+      if (!narrative) {
         narrative = createFallbackNarrative(ws.name, ws.domain, rawMetrics);
       }
 
@@ -143,7 +172,7 @@ Provide an executive summary, critical areas of concern (missing citations or mo
       const reportId = crypto.randomUUID();
       const { error: insertErr } = await supabase.from('audit_reports').insert({
         id: reportId,
-        workspace_id: ws.id.length === 36 ? ws.id : null,
+        workspace_id: ws.id && ws.id.length === 36 ? ws.id : null,
         raw_metrics: rawMetrics,
         ai_narrative: narrative,
         created_at: new Date().toISOString(),
