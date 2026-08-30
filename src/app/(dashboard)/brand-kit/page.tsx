@@ -4,6 +4,8 @@ import * as React from 'react';
 import {
   Building2,
   Globe,
+  Briefcase,
+  FileText,
   Plus,
   Shield,
   Save,
@@ -216,8 +218,8 @@ export default function BrandKitPage() {
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[450px] space-y-3">
-        <RotateCw className="w-7 h-7 text-indigo-600 animate-spin" />
-        <span className="text-xs text-slate-500 font-medium">
+        <RotateCw className="w-7 h-7 text-gray-900 dark:text-white animate-spin" />
+        <span className="text-xs text-gray-500 font-medium">
           Loading brand configuration from Supabase...
         </span>
       </div>
@@ -228,22 +230,22 @@ export default function BrandKitPage() {
     <div className="max-w-4xl mx-auto space-y-10 pb-32">
       
       {/* ========================================================================= */}
-      {/* 1. Clean Header (Title & Breadcrumbs Only) */}
+      {/* 1. Clean Header (Title & Breadcrumbs) */}
       {/* ========================================================================= */}
-      <div className="space-y-1 pb-6 border-b border-slate-200/80 dark:border-zinc-800">
+      <div className="space-y-1 pb-6 border-b border-gray-200/80 dark:border-zinc-800">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
+          <span className="text-xs font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">
             Configuration
           </span>
-          <span className="text-slate-300 dark:text-zinc-700">•</span>
-          <span className="text-xs text-slate-500 dark:text-zinc-400 font-medium">
+          <span className="text-gray-300 dark:text-zinc-700">•</span>
+          <span className="text-xs text-gray-500 dark:text-zinc-400 font-medium">
             Entity Grounding
           </span>
         </div>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+        <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
           Brand Kit & Entity Configuration
         </h1>
-        <p className="text-xs text-slate-500 dark:text-zinc-400">
+        <p className="text-xs text-gray-500 dark:text-zinc-400">
           Configure your primary brand identity, benchmark competitors, and active AI engine auditors.
         </p>
       </div>
@@ -253,91 +255,106 @@ export default function BrandKitPage() {
       {/* ========================================================================= */}
       <section className="flex flex-col md:flex-row gap-6 md:gap-8 items-start">
         {/* Left Column (1/3 width): Section Title & Context */}
-        <div className="md:w-1/3 space-y-1.5 shrink-0">
+        <div className="md:w-1/3 space-y-1.5 shrink-0 md:pt-1">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+            <div className="w-7 h-7 rounded-lg bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 flex items-center justify-center">
               <Building2 className="w-4 h-4" />
             </div>
-            <h2 className="text-sm font-bold text-slate-900 dark:text-white">
+            <h2 className="text-sm font-bold text-gray-900 dark:text-white">
               Brand Identity
             </h2>
           </div>
-          <p className="text-xs text-slate-500 dark:text-zinc-400 leading-relaxed">
+          <p className="text-xs text-gray-500 dark:text-zinc-400 leading-relaxed">
             Define your primary brand name, canonical domain URL, industry niche, and core capability. AI search models use this context to ground citation queries and evaluate entity relevance.
           </p>
         </div>
 
         {/* Right Column (2/3 width): Input Fields Card */}
-        <div className="md:w-2/3 w-full border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm rounded-xl p-6 space-y-4">
+        <div className="md:w-2/3 w-full border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm rounded-xl p-6 space-y-4">
           {/* Brand Name */}
           <div className="space-y-1">
-            <label className="text-xs font-semibold text-slate-700 dark:text-zinc-300">
+            <label className="text-xs font-semibold text-gray-700 dark:text-zinc-300">
               Brand Name *
             </label>
-            <input
-              type="text"
-              value={brandName}
-              onChange={(e) => setBrandName(e.target.value)}
-              placeholder="e.g. Nike, Acme Labs, Apex Coffee"
-              className="w-full h-9 px-3 text-xs rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/60 text-slate-900 dark:text-zinc-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all shadow-xs"
-            />
-            <p className="text-[10px] text-slate-400 dark:text-zinc-500">
+            <div className="relative flex items-center">
+              <div className="absolute left-3 flex items-center pointer-events-none">
+                <Building2 className="w-3.5 h-3.5 text-gray-400 dark:text-zinc-500" />
+              </div>
+              <input
+                type="text"
+                value={brandName}
+                onChange={(e) => setBrandName(e.target.value)}
+                placeholder="e.g. Nike, Acme Labs, Apex Coffee"
+                className="w-full h-9 pl-9 pr-3 text-xs rounded-lg border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/60 text-gray-900 dark:text-zinc-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-xs"
+              />
+            </div>
+            <p className="text-[10px] text-gray-400 dark:text-zinc-500">
               The primary trademark or brand name evaluated by LLMs.
             </p>
           </div>
 
           {/* Primary Domain */}
           <div className="space-y-1">
-            <label className="text-xs font-semibold text-slate-700 dark:text-zinc-300">
+            <label className="text-xs font-semibold text-gray-700 dark:text-zinc-300">
               Primary Domain URL
             </label>
             <div className="relative flex items-center">
               <div className="absolute left-3 flex items-center pointer-events-none">
-                <Globe className="w-3.5 h-3.5 text-slate-400" />
+                <Globe className="w-3.5 h-3.5 text-gray-400 dark:text-zinc-500" />
               </div>
               <input
                 type="text"
                 value={brandDomain}
                 onChange={(e) => setBrandDomain(e.target.value)}
                 placeholder="e.g. nike.com, acmelabs.com"
-                className="w-full h-9 pl-9 pr-3 text-xs rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/60 text-slate-900 dark:text-zinc-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all shadow-xs font-mono"
+                className="w-full h-9 pl-9 pr-3 text-xs rounded-lg border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/60 text-gray-900 dark:text-zinc-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-xs font-mono"
               />
             </div>
-            <p className="text-[10px] text-slate-400 dark:text-zinc-500">
+            <p className="text-[10px] text-gray-400 dark:text-zinc-500">
               Main canonical domain used for citation attribution and authority scoring.
             </p>
           </div>
 
           {/* Industry / Market Niche */}
           <div className="space-y-1">
-            <label className="text-xs font-semibold text-slate-700 dark:text-zinc-300">
+            <label className="text-xs font-semibold text-gray-700 dark:text-zinc-300">
               Industry / Market Niche
             </label>
-            <input
-              type="text"
-              value={industry}
-              onChange={(e) => setIndustry(e.target.value)}
-              placeholder="e.g. Athletic Apparel & Footwear, Specialty Coffee, Developer Tools"
-              className="w-full h-9 px-3 text-xs rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/60 text-slate-900 dark:text-zinc-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all shadow-xs"
-            />
-            <p className="text-[10px] text-slate-400 dark:text-zinc-500">
+            <div className="relative flex items-center">
+              <div className="absolute left-3 flex items-center pointer-events-none">
+                <Briefcase className="w-3.5 h-3.5 text-gray-400 dark:text-zinc-500" />
+              </div>
+              <input
+                type="text"
+                value={industry}
+                onChange={(e) => setIndustry(e.target.value)}
+                placeholder="e.g. Athletic Apparel & Footwear, Specialty Coffee, Developer Tools"
+                className="w-full h-9 pl-9 pr-3 text-xs rounded-lg border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/60 text-gray-900 dark:text-zinc-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-xs"
+              />
+            </div>
+            <p className="text-[10px] text-gray-400 dark:text-zinc-500">
               Vertical or category used for market taxonomy and competitor classification.
             </p>
           </div>
 
           {/* Core Value Proposition & Description */}
           <div className="space-y-1">
-            <label className="text-xs font-semibold text-slate-700 dark:text-zinc-300">
+            <label className="text-xs font-semibold text-gray-700 dark:text-zinc-300">
               Core Value Proposition & Description
             </label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={3}
-              placeholder="Summarize what your brand does so AI auditors evaluate entity contextual relevance..."
-              className="w-full p-3 text-xs rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/60 text-slate-900 dark:text-zinc-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all shadow-xs"
-            />
-            <p className="text-[10px] text-slate-400 dark:text-zinc-500">
+            <div className="relative">
+              <div className="absolute left-3 top-2.5 flex items-center pointer-events-none">
+                <FileText className="w-3.5 h-3.5 text-gray-400 dark:text-zinc-500" />
+              </div>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={3}
+                placeholder="Summarize what your brand does so AI auditors evaluate entity contextual relevance..."
+                className="w-full pl-9 pr-3 pt-2 text-xs rounded-lg border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/60 text-gray-900 dark:text-zinc-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-xs leading-relaxed"
+              />
+            </div>
+            <p className="text-[10px] text-gray-400 dark:text-zinc-500">
               Provides grounding summary context for LLM generative queries.
             </p>
           </div>
@@ -347,18 +364,18 @@ export default function BrandKitPage() {
       {/* ========================================================================= */}
       {/* 3. Split-Row Section 2: Benchmark Competitors */}
       {/* ========================================================================= */}
-      <section className="flex flex-col md:flex-row gap-6 md:gap-8 items-start pt-6 border-t border-slate-200/80 dark:border-zinc-800">
+      <section className="flex flex-col md:flex-row gap-6 md:gap-8 items-start pt-6 border-t border-gray-200/80 dark:border-zinc-800">
         {/* Left Column (1/3 width): Section Title & Context */}
-        <div className="md:w-1/3 space-y-1.5 shrink-0">
+        <div className="md:w-1/3 space-y-1.5 shrink-0 md:pt-1">
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-lg bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 flex items-center justify-center">
               <Shield className="w-4 h-4" />
             </div>
-            <h2 className="text-sm font-bold text-slate-900 dark:text-white">
+            <h2 className="text-sm font-bold text-gray-900 dark:text-white">
               Benchmark Competitors
             </h2>
           </div>
-          <p className="text-xs text-slate-500 dark:text-zinc-400 leading-relaxed">
+          <p className="text-xs text-gray-500 dark:text-zinc-400 leading-relaxed">
             Specify rival brand entities and competitor domains. Beacon measures your generative Share of Voice (SOV) and tracks displacement rates against these targets.
           </p>
           <div className="pt-2">
@@ -369,91 +386,97 @@ export default function BrandKitPage() {
         </div>
 
         {/* Right Column (2/3 width): Competitors Manager Card */}
-        <div className="md:w-2/3 w-full border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm rounded-xl p-6 space-y-5">
+        <div className="md:w-2/3 w-full border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm rounded-xl p-6 space-y-5">
           {/* Single-Row Add Competitor Form */}
           <form
             onSubmit={handleAddCompetitor}
-            className="flex flex-col sm:flex-row items-center gap-2 p-1.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50/60 dark:bg-zinc-800/40"
+            className="flex flex-col sm:flex-row items-center gap-2 p-1.5 rounded-xl border border-gray-200 dark:border-zinc-800 bg-gray-50/60 dark:bg-zinc-800/40"
           >
             <input
               type="text"
               placeholder="Competitor brand (e.g. Fivetran)"
               value={newCompName}
               onChange={(e) => setNewCompName(e.target.value)}
-              className="w-full sm:flex-1 h-8.5 px-3 text-xs rounded-lg border-0 bg-transparent text-slate-900 dark:text-zinc-100 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              className="w-full sm:flex-1 h-8.5 px-3 text-xs rounded-lg border-0 bg-transparent text-gray-900 dark:text-zinc-100 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
-            <div className="h-4 w-px bg-slate-200 dark:bg-zinc-700 hidden sm:block" />
+            <div className="h-4 w-px bg-gray-200 dark:bg-zinc-700 hidden sm:block" />
             <input
               type="text"
               placeholder="Domain (e.g. fivetran.com)"
               value={newCompDomain}
               onChange={(e) => setNewCompDomain(e.target.value)}
-              className="w-full sm:flex-1 h-8.5 px-3 text-xs rounded-lg border-0 bg-transparent text-slate-900 dark:text-zinc-100 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-mono"
+              className="w-full sm:flex-1 h-8.5 px-3 text-xs rounded-lg border-0 bg-transparent text-gray-900 dark:text-zinc-100 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono"
             />
             <Button
               type="submit"
+              variant="outline"
               disabled={!newCompName.trim()}
-              className="w-full sm:w-auto h-8.5 px-3.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs flex items-center justify-center gap-1.5 shrink-0 cursor-pointer disabled:opacity-50"
+              className="w-full sm:w-auto h-8.5 px-3.5 rounded-lg border border-gray-300 dark:border-zinc-700 bg-transparent hover:bg-gray-100 dark:hover:bg-zinc-800 text-gray-800 dark:text-zinc-200 font-semibold text-xs flex items-center justify-center gap-1.5 shrink-0 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <Plus className="w-3.5 h-3.5" />
+              <Plus className="w-3.5 h-3.5 text-gray-500 dark:text-zinc-400" />
               <span>Add Competitor</span>
             </Button>
           </form>
 
           {/* Competitor Badges Grid */}
           <div className="space-y-2 pt-1">
-            <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
+            <div className="text-[11px] font-bold uppercase tracking-wider text-gray-400 dark:text-zinc-500">
               Active Benchmark Targets ({competitors.length})
             </div>
 
             {competitors.length === 0 ? (
-              <div className="p-6 text-center rounded-xl border border-dashed border-slate-200 dark:border-zinc-800 bg-slate-50/40 text-xs text-slate-400">
+              <div className="p-6 text-center rounded-xl border border-dashed border-gray-200 dark:border-zinc-800 bg-gray-50/40 text-xs text-gray-400">
                 No competitors configured. Add rival brand names and domains above to benchmark market share.
               </div>
             ) : (
-              <div className="flex flex-wrap gap-2.5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 {competitors.map((comp) => (
                   <div
                     key={comp.id}
-                    className="inline-flex items-center gap-2 pl-2.5 pr-1.5 py-1 rounded-xl border border-slate-200/90 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs shadow-2xs hover:border-indigo-400 dark:hover:border-indigo-600 transition-all"
+                    className="flex items-center justify-between gap-3 pl-3 pr-2 py-2 rounded-xl border border-gray-200/90 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs shadow-2xs hover:border-gray-300 dark:hover:border-zinc-700 transition-all"
                   >
-                    <DomainFavicon
-                      domainOrUrl={comp.domain || comp.name}
-                      size={18}
-                      className="rounded-md shadow-2xs shrink-0"
-                      fallbackInitial
-                    />
-                    <span className="font-semibold text-slate-900 dark:text-zinc-100">
-                      {comp.name}
-                    </span>
-                    {comp.domain && (
-                      <span className="font-mono text-[10px] text-slate-400 dark:text-zinc-500">
-                        ({comp.domain})
-                      </span>
-                    )}
+                    {/* Left: Favicon + Name + Domain */}
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <DomainFavicon
+                        domainOrUrl={comp.domain || comp.name}
+                        size={18}
+                        className="rounded-md shadow-2xs shrink-0"
+                        fallbackInitial
+                      />
+                      <div className="flex items-baseline gap-1.5 min-w-0 truncate">
+                        <span className="font-semibold text-gray-900 dark:text-zinc-100 truncate">
+                          {comp.name}
+                        </span>
+                        {comp.domain && (
+                          <span className="font-mono text-[10px] text-gray-400 dark:text-zinc-500 truncate">
+                            ({comp.domain})
+                          </span>
+                        )}
+                      </div>
+                    </div>
 
-                    {/* Outbound Link */}
-                    {comp.domain && (
-                      <a
-                        href={`https://${comp.domain}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="p-1 rounded text-slate-400 hover:text-indigo-600 transition-colors"
-                        title="Visit domain"
+                    {/* Right: Actions pushed cleanly to the right edge */}
+                    <div className="flex items-center gap-1 shrink-0">
+                      {comp.domain && (
+                        <a
+                          href={comp.domain.startsWith('http') ? comp.domain : `https://${comp.domain}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-1 rounded-md text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors"
+                          title="Visit domain"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                        </a>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveCompetitor(comp.id)}
+                        className="p-1 rounded-md text-gray-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
+                        title="Remove competitor"
                       >
-                        <ExternalLink className="w-3 h-3" />
-                      </a>
-                    )}
-
-                    {/* Ghost Style 'X' Delete Button */}
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveCompetitor(comp.id)}
-                      className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
-                      title="Remove competitor"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -465,39 +488,39 @@ export default function BrandKitPage() {
       {/* ========================================================================= */}
       {/* 4. Split-Row Section 3: Active AI Engine Auditors */}
       {/* ========================================================================= */}
-      <section className="flex flex-col md:flex-row gap-6 md:gap-8 items-start pt-6 border-t border-slate-200/80 dark:border-zinc-800">
+      <section className="flex flex-col md:flex-row gap-6 md:gap-8 items-start pt-6 border-t border-gray-200/80 dark:border-zinc-800">
         {/* Left Column (1/3 width): Section Title & Context */}
-        <div className="md:w-1/3 space-y-1.5 shrink-0">
+        <div className="md:w-1/3 space-y-1.5 shrink-0 md:pt-1">
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-lg bg-amber-50 dark:bg-amber-950 text-amber-600 dark:text-amber-400 flex items-center justify-center">
               <Sparkles className="w-4 h-4" />
             </div>
-            <h2 className="text-sm font-bold text-slate-900 dark:text-white">
+            <h2 className="text-sm font-bold text-gray-900 dark:text-white">
               Active AI Engine Auditors
             </h2>
           </div>
-          <p className="text-xs text-slate-500 dark:text-zinc-400 leading-relaxed">
+          <p className="text-xs text-gray-500 dark:text-zinc-400 leading-relaxed">
             Choose which generative search models evaluate your brand during live and scheduled audits. Toggle models on or off based on your target audience channels.
           </p>
         </div>
 
         {/* Right Column (2/3 width): Engine Toggles Card */}
-        <div className="md:w-2/3 w-full border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm rounded-xl p-6 space-y-2.5">
+        <div className="md:w-2/3 w-full border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm rounded-xl p-6 space-y-2.5">
           {ENGINE_AUDITORS.map((engine) => {
             const isChecked = enabledEngines[engine.key] ?? true;
 
             return (
               <div
                 key={engine.key}
-                className="flex items-center justify-between p-3 rounded-lg border border-slate-100 dark:border-zinc-800/80 bg-slate-50/50 dark:bg-zinc-800/30 hover:border-slate-300 dark:hover:border-zinc-700 transition-all"
+                className="flex items-center justify-between p-3 rounded-lg border border-gray-100 dark:border-zinc-800/80 bg-gray-50/50 dark:bg-zinc-800/30 hover:border-gray-300 dark:hover:border-zinc-700 transition-all"
               >
                 <div className="flex items-center gap-3">
                   <EngineIcon engine={engine.name} size={18} />
                   <div>
-                    <div className="text-xs font-semibold text-slate-900 dark:text-zinc-100">
+                    <div className="text-xs font-semibold text-gray-900 dark:text-zinc-100">
                       {engine.name}
                     </div>
-                    <div className="text-[10px] text-slate-400 font-mono">
+                    <div className="text-[10px] text-gray-400 font-mono">
                       {engine.model} • {engine.provider}
                     </div>
                   </div>
@@ -511,7 +534,7 @@ export default function BrandKitPage() {
                       [engine.key]: checked,
                     }))
                   }
-                  className="data-[state=checked]:bg-indigo-600"
+                  className="data-[state=checked]:bg-gray-900 dark:data-[state=checked]:bg-white"
                 />
               </div>
             );
@@ -522,7 +545,7 @@ export default function BrandKitPage() {
       {/* ========================================================================= */}
       {/* 5. Sticky Bottom Action Bar (Unsaved Changes & Save Trigger) */}
       {/* ========================================================================= */}
-      <div className="fixed bottom-0 left-0 right-0 z-30 backdrop-blur-md bg-white/95 dark:bg-zinc-950/95 border-t border-slate-200/90 dark:border-zinc-800 py-3.5 px-4 sm:px-8 shadow-lg">
+      <div className="fixed bottom-0 left-0 right-0 z-30 backdrop-blur-md bg-white/95 dark:bg-zinc-950/95 border-t border-gray-200/90 dark:border-zinc-800 py-3.5 px-4 sm:px-8 shadow-lg">
         <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
           <div className="flex items-center gap-2 text-xs">
             {statusMessage ? (
@@ -547,7 +570,7 @@ export default function BrandKitPage() {
                 <span>You have unsaved changes</span>
               </div>
             ) : (
-              <div className="flex items-center gap-1.5 text-slate-400 dark:text-zinc-500">
+              <div className="flex items-center gap-1.5 text-gray-400 dark:text-zinc-500">
                 <Check className="w-3.5 h-3.5 text-emerald-500" />
                 <span>All brand settings up to date</span>
               </div>
@@ -562,7 +585,7 @@ export default function BrandKitPage() {
                 size="sm"
                 onClick={handleResetChanges}
                 disabled={isSaving}
-                className="h-9 px-3.5 rounded-xl border-slate-200 dark:border-zinc-800 text-xs font-semibold text-slate-600 dark:text-zinc-400 hover:text-slate-900 cursor-pointer"
+                className="h-9 px-3.5 rounded-xl border-gray-200 dark:border-zinc-800 text-xs font-semibold text-gray-600 dark:text-zinc-400 hover:text-gray-900 cursor-pointer"
               >
                 Discard
               </Button>
@@ -570,8 +593,8 @@ export default function BrandKitPage() {
 
             <Button
               onClick={handleSaveBrandKit}
-              disabled={isSaving}
-              className="h-9 px-5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs flex items-center gap-2 shadow-sm transition-all cursor-pointer disabled:opacity-50"
+              disabled={!hasUnsavedChanges || isSaving}
+              className="h-9 px-5 rounded-xl bg-gray-900 hover:bg-black dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-zinc-900 font-semibold text-xs flex items-center gap-2 shadow-xs transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSaving ? (
                 <>
@@ -580,7 +603,7 @@ export default function BrandKitPage() {
                 </>
               ) : savedSuccess ? (
                 <>
-                  <Check className="w-3.5 h-3.5 text-emerald-300" />
+                  <Check className="w-3.5 h-3.5 text-emerald-400 dark:text-emerald-600" />
                   <span>Saved!</span>
                 </>
               ) : (
@@ -597,3 +620,4 @@ export default function BrandKitPage() {
     </div>
   );
 }
+

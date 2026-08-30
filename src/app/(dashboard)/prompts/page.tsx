@@ -38,6 +38,12 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import {
   getPrompts,
   createPrompt,
   togglePromptActive,
@@ -534,7 +540,7 @@ export default function PromptsPage() {
 
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* ========================================================================= */}
       {/* 1. Header & Reorganized Action Buttons */}
       {/* ========================================================================= */}
@@ -548,28 +554,28 @@ export default function PromptsPage() {
           </p>
         </div>
 
-        {/* Buttons in exact requested order: Add Prompt -> Generate Prompts with AI -> Import CSV */}
+        {/* Action Buttons: Primary AI Generator -> Add Prompt -> Import CSV */}
         <div className="flex items-center flex-wrap gap-2.5">
-          {/* Button 1: Add Prompt (Solid Primary) */}
+          {/* Button 1: Generate Prompts with AI (Primary CTA with vibrant gradient) */}
           <Button
-            onClick={() => setIsAddModalOpen(true)}
-            className="h-9 px-4 rounded-xl bg-gray-900 hover:bg-black dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-zinc-900 font-medium text-xs flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Add Prompt</span>
-          </Button>
-
-          {/* Button 2: Generate Prompts with AI (Secondary / Outline) */}
-          <Button
-            variant="outline"
             onClick={() => {
               setIsAiModalOpen(true);
               if (aiSuggestions.length === 0) handleGenerateAiPrompts();
             }}
-            className="h-9 px-3.5 rounded-xl border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-gray-700 dark:text-zinc-300 font-medium text-xs flex items-center gap-2 shadow-2xs hover:bg-gray-50 dark:hover:bg-zinc-800 cursor-pointer"
+            className="h-9 px-4 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-700 hover:via-indigo-700 hover:to-blue-800 text-white font-medium text-xs flex items-center gap-2 shadow-sm shadow-blue-500/25 border-0 transition-all cursor-pointer hover:shadow-md hover:shadow-blue-500/30 active:scale-[0.98]"
           >
-            <Sparkles className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+            <Sparkles className="w-3.5 h-3.5 text-white" />
             <span>Generate Prompts with AI</span>
+          </Button>
+
+          {/* Button 2: Add Prompt (Secondary / Outline) */}
+          <Button
+            variant="outline"
+            onClick={() => setIsAddModalOpen(true)}
+            className="h-9 px-3.5 rounded-xl border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-gray-700 dark:text-zinc-300 font-medium text-xs flex items-center gap-1.5 shadow-2xs hover:bg-gray-50 dark:hover:bg-zinc-800 cursor-pointer"
+          >
+            <Plus className="w-3.5 h-3.5 text-gray-500 dark:text-zinc-400" />
+            <span>Add Prompt</span>
           </Button>
 
           {/* Button 3: Import CSV (Secondary / Outline) */}
@@ -578,7 +584,7 @@ export default function PromptsPage() {
             onClick={() => setIsImportModalOpen(true)}
             className="h-9 px-3.5 rounded-xl border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-gray-700 dark:text-zinc-300 font-medium text-xs flex items-center gap-2 shadow-2xs hover:bg-gray-50 dark:hover:bg-zinc-800 cursor-pointer"
           >
-            <Upload className="w-3.5 h-3.5 text-gray-500" />
+            <Upload className="w-3.5 h-3.5 text-gray-500 dark:text-zinc-400" />
             <span>Import CSV</span>
           </Button>
         </div>
@@ -587,49 +593,71 @@ export default function PromptsPage() {
       {/* ========================================================================= */}
       {/* 2. Top Metric Cards (3 Columns) */}
       {/* ========================================================================= */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5">
-        {/* Card 1: Active Prompts */}
-        <div className="p-6 rounded-xl border border-gray-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-2xs flex flex-col justify-between">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        {/* Card 1: Prompts Used */}
+        <div className="p-6 rounded-2xl border border-gray-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-2xs flex flex-col justify-between">
           <div>
-            <span className="text-[11px] font-bold tracking-wider uppercase text-gray-500 dark:text-zinc-400">
-              Active Prompts
-            </span>
-            <div className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mt-1 font-mono">
-              {activeCount}/{totalCount}
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold tracking-wider uppercase text-gray-500 dark:text-zinc-400">
+                Prompts Used
+              </span>
+              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800/60">
+                Pro Plan
+              </span>
+            </div>
+            <div className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mt-2 font-mono tracking-tight flex items-baseline gap-1.5">
+              <span>{totalCount}</span>
+              <span className="text-base md:text-lg font-normal text-gray-400 dark:text-zinc-500">/ 100</span>
             </div>
           </div>
-          <div className="text-xs text-gray-500 dark:text-zinc-400 mt-3 font-medium">
-            scored in active evaluation cycles
+          <div className="mt-3.5 space-y-2">
+            <div className="w-full h-1.5 rounded-full bg-gray-100 dark:bg-zinc-800 overflow-hidden">
+              <div
+                className="h-full rounded-full bg-blue-600 transition-all duration-500"
+                style={{ width: `${Math.min(100, Math.max(3, (totalCount / 100) * 100))}%` }}
+              />
+            </div>
+            <div className="text-xs text-gray-500 dark:text-zinc-400 font-medium">
+              {totalCount} / 100 allotted prompts ({activeCount} active)
+            </div>
           </div>
         </div>
 
         {/* Card 2: Average Visibility Score */}
-        <div className="p-6 rounded-xl border border-gray-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-2xs flex flex-col justify-between">
+        <div className="p-6 rounded-2xl border border-gray-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-2xs flex flex-col justify-between">
           <div>
             <span className="text-[11px] font-bold tracking-wider uppercase text-gray-500 dark:text-zinc-400">
               Average Visibility Score
             </span>
-            <div className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mt-1 font-mono">
+            <div className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mt-2 font-mono tracking-tight">
               {avgOverallScore !== null ? `${avgOverallScore}%` : '—'}
             </div>
           </div>
-          <div className="text-xs text-gray-500 dark:text-zinc-400 mt-3 font-medium">
-            across tracked AI engines
+          <div className="text-xs text-gray-500 dark:text-zinc-400 mt-3.5 font-medium">
+            across active AI answer engines
           </div>
         </div>
 
-        {/* Card 3: Connected Models */}
-        <div className="p-6 rounded-xl border border-gray-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-2xs flex flex-col justify-between">
+        {/* Card 3: Connected Models with inline SVG logos */}
+        <div className="p-6 rounded-2xl border border-gray-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-2xs flex flex-col justify-between">
           <div>
             <span className="text-[11px] font-bold tracking-wider uppercase text-gray-500 dark:text-zinc-400">
               Connected Models
             </span>
-            <div className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mt-1 tracking-tight">
+            <div className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mt-1.5 tracking-tight">
               5 Engines
             </div>
           </div>
-          <div className="text-xs text-gray-500 dark:text-zinc-400 mt-3 font-medium">
-            ChatGPT, Perplexity, Gemini, Claude, Copilot
+          <div className="flex flex-wrap items-center gap-1.5 mt-3.5">
+            {AVAILABLE_ENGINES.map((eng) => (
+              <div
+                key={eng.name}
+                className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg bg-gray-50 dark:bg-zinc-800/60 border border-gray-200/60 dark:border-zinc-700/50 text-[11px] font-medium text-gray-700 dark:text-zinc-300 shadow-2xs"
+              >
+                <EngineIcon engine={eng.name} size={13} />
+                <span>{eng.name}</span>
+              </div>
+            ))}
           </div>
         </div>
       </div>
@@ -637,10 +665,10 @@ export default function PromptsPage() {
       {/* ========================================================================= */}
       {/* 3. Filter Bar & Execution Toolbar */}
       {/* ========================================================================= */}
-      <div className="space-y-3">
+      <div className="space-y-4">
         {/* Search & Pillar Tabs Bar */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 bg-gray-50/80 dark:bg-zinc-900/60 p-3 rounded-xl border border-gray-200/80 dark:border-zinc-800 shadow-2xs">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 flex-1">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3.5 bg-gray-50/80 dark:bg-zinc-900/60 p-3.5 rounded-2xl border border-gray-200/80 dark:border-zinc-800 shadow-2xs">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 flex-1">
             {/* Search Filter Input */}
             <div className="relative w-full sm:w-64">
               <Search className="w-3.5 h-3.5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -649,64 +677,97 @@ export default function PromptsPage() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Filter prompts..."
-                className="w-full h-8.5 pl-8.5 pr-3 rounded-lg border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs text-gray-900 dark:text-zinc-100 placeholder-gray-400 focus:outline-none focus:border-blue-500 shadow-2xs"
+                className="w-full h-9 pl-9 pr-3 rounded-xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs text-gray-900 dark:text-zinc-100 placeholder-gray-400 focus:outline-none focus:border-blue-500 shadow-2xs"
               />
             </div>
 
-            {/* Pillar Filter Tabs */}
-            <div className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0">
-              <button
-                type="button"
-                onClick={() => setSelectedPillar('ALL')}
-                className={cn(
-                  'px-2.5 py-1 rounded-lg text-xs font-medium transition-colors shrink-0 cursor-pointer',
-                  selectedPillar === 'ALL'
-                    ? 'bg-white dark:bg-zinc-800 text-gray-900 dark:text-white shadow-2xs border border-gray-200 dark:border-zinc-700'
-                    : 'text-gray-600 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-zinc-200'
-                )}
-              >
-                All Pillars ({totalCount})
-              </button>
-              <button
-                type="button"
-                onClick={() => setSelectedPillar('GEO')}
-                className={cn(
-                  'px-2.5 py-1 rounded-lg text-xs font-medium transition-colors shrink-0 flex items-center gap-1.5 cursor-pointer',
-                  selectedPillar === 'GEO'
-                    ? 'bg-white dark:bg-zinc-800 text-blue-600 dark:text-blue-400 shadow-2xs border border-gray-200 dark:border-zinc-700'
-                    : 'text-gray-600 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-zinc-200'
-                )}
-              >
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                GEO ({geoCount})
-              </button>
-              <button
-                type="button"
-                onClick={() => setSelectedPillar('AEO')}
-                className={cn(
-                  'px-2.5 py-1 rounded-lg text-xs font-medium transition-colors shrink-0 flex items-center gap-1.5 cursor-pointer',
-                  selectedPillar === 'AEO'
-                    ? 'bg-white dark:bg-zinc-800 text-purple-600 dark:text-purple-400 shadow-2xs border border-gray-200 dark:border-zinc-700'
-                    : 'text-gray-600 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-zinc-200'
-                )}
-              >
-                <span className="w-1.5 h-1.5 rounded-full bg-purple-500" />
-                AEO ({aeoCount})
-              </button>
-              <button
-                type="button"
-                onClick={() => setSelectedPillar('AIO')}
-                className={cn(
-                  'px-2.5 py-1 rounded-lg text-xs font-medium transition-colors shrink-0 flex items-center gap-1.5 cursor-pointer',
-                  selectedPillar === 'AIO'
-                    ? 'bg-white dark:bg-zinc-800 text-emerald-600 dark:text-emerald-400 shadow-2xs border border-gray-200 dark:border-zinc-700'
-                    : 'text-gray-600 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-zinc-200'
-                )}
-              >
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                AIO ({aioCount})
-              </button>
-            </div>
+            {/* Pillar Filter Tabs with Tooltips and distinct active/inactive visual states */}
+            <TooltipProvider delayDuration={150}>
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedPillar('ALL')}
+                      className={cn(
+                        'px-3 py-1.5 rounded-xl text-xs font-semibold transition-all shrink-0 cursor-pointer border select-none',
+                        selectedPillar === 'ALL'
+                          ? 'bg-gray-900 dark:bg-white text-white dark:text-zinc-900 border-gray-900 dark:border-white shadow-xs'
+                          : 'bg-white dark:bg-zinc-900 text-gray-600 dark:text-zinc-400 border-gray-200 dark:border-zinc-800 hover:border-gray-300 dark:hover:border-zinc-700 hover:text-gray-900 dark:hover:text-zinc-200'
+                      )}
+                    >
+                      All Pillars ({totalCount})
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="font-medium">All Pillars — View prompts across all optimization categories</p>
+                  </TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedPillar('GEO')}
+                      className={cn(
+                        'px-3 py-1.5 rounded-xl text-xs font-semibold transition-all shrink-0 flex items-center gap-1.5 cursor-pointer border select-none',
+                        selectedPillar === 'GEO'
+                          ? 'bg-blue-600 text-white border-blue-600 shadow-xs ring-2 ring-blue-500/20'
+                          : 'bg-white dark:bg-zinc-900 text-gray-600 dark:text-zinc-400 border-gray-200 dark:border-zinc-800 hover:border-blue-300 dark:hover:border-blue-900 hover:text-blue-600 dark:hover:text-blue-400'
+                      )}
+                    >
+                      <span className={cn('w-1.5 h-1.5 rounded-full', selectedPillar === 'GEO' ? 'bg-white' : 'bg-blue-500')} />
+                      <span>GEO ({geoCount})</span>
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="font-medium">Generative Engine Optimization (GEO)</p>
+                  </TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedPillar('AEO')}
+                      className={cn(
+                        'px-3 py-1.5 rounded-xl text-xs font-semibold transition-all shrink-0 flex items-center gap-1.5 cursor-pointer border select-none',
+                        selectedPillar === 'AEO'
+                          ? 'bg-purple-600 text-white border-purple-600 shadow-xs ring-2 ring-purple-500/20'
+                          : 'bg-white dark:bg-zinc-900 text-gray-600 dark:text-zinc-400 border-gray-200 dark:border-zinc-800 hover:border-purple-300 dark:hover:border-purple-900 hover:text-purple-600 dark:hover:text-purple-400'
+                      )}
+                    >
+                      <span className={cn('w-1.5 h-1.5 rounded-full', selectedPillar === 'AEO' ? 'bg-white' : 'bg-purple-500')} />
+                      <span>AEO ({aeoCount})</span>
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="font-medium">Answer Engine Optimization (AEO)</p>
+                  </TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedPillar('AIO')}
+                      className={cn(
+                        'px-3 py-1.5 rounded-xl text-xs font-semibold transition-all shrink-0 flex items-center gap-1.5 cursor-pointer border select-none',
+                        selectedPillar === 'AIO'
+                          ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs ring-2 ring-emerald-500/20'
+                          : 'bg-white dark:bg-zinc-900 text-gray-600 dark:text-zinc-400 border-gray-200 dark:border-zinc-800 hover:border-emerald-300 dark:hover:border-emerald-900 hover:text-emerald-600 dark:hover:text-emerald-400'
+                      )}
+                    >
+                      <span className={cn('w-1.5 h-1.5 rounded-full', selectedPillar === 'AIO' ? 'bg-white' : 'bg-emerald-500')} />
+                      <span>AIO ({aioCount})</span>
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="font-medium">Artificial Intelligence Engine Optimization (AIO)</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+            </TooltipProvider>
           </div>
 
           {/* Dropdown Filters */}
@@ -717,7 +778,7 @@ export default function PromptsPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="h-8.5 px-2.5 rounded-lg border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs font-medium text-gray-700 dark:text-zinc-300 gap-1.5 shadow-2xs cursor-pointer"
+                  className="h-9 px-3 rounded-xl border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs font-medium text-gray-700 dark:text-zinc-300 gap-1.5 shadow-2xs cursor-pointer"
                 >
                   <span>{selectedIntent === 'ALL' ? 'All Intents' : selectedIntent}</span>
                   <ChevronDown className="w-3 h-3 text-gray-400" />
@@ -738,7 +799,7 @@ export default function PromptsPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="h-8.5 px-2.5 rounded-lg border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs font-medium text-gray-700 dark:text-zinc-300 gap-1.5 shadow-2xs cursor-pointer"
+                  className="h-9 px-3 rounded-xl border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs font-medium text-gray-700 dark:text-zinc-300 gap-1.5 shadow-2xs cursor-pointer"
                 >
                   <span>{selectedType === 'ALL' ? 'All Types' : selectedType}</span>
                   <ChevronDown className="w-3 h-3 text-gray-400" />
@@ -754,7 +815,7 @@ export default function PromptsPage() {
         </div>
 
         {/* Execution Controls Toolbar (Run Selected, Run All, Schedule Audits) */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-xl border border-gray-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-2xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 p-3.5 rounded-2xl border border-gray-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-2xs">
           <div className="flex items-center gap-2 flex-wrap">
             {/* Run Selected Button */}
             <Button
@@ -836,46 +897,137 @@ export default function PromptsPage() {
       </div>
 
       {/* ========================================================================= */}
-      {/* 4. Prompt Library Table */}
+      {/* 4. Prompt Library Table / Empty State */}
       {/* ========================================================================= */}
       {isLoading ? (
-        <div className="p-12 flex flex-col items-center justify-center space-y-2 rounded-xl border border-gray-200/80 bg-white dark:bg-zinc-900 shadow-2xs">
+        <div className="p-12 flex flex-col items-center justify-center space-y-2 rounded-2xl border border-gray-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-2xs">
           <RotateCw className="w-6 h-6 text-blue-600 animate-spin" />
           <span className="text-xs text-gray-500 font-medium">Fetching prompts from Supabase...</span>
         </div>
       ) : prompts.length === 0 ? (
-        /* Empty State */
-        <div className="p-12 text-center rounded-xl border border-dashed border-gray-300 dark:border-zinc-800 bg-gray-50/50 dark:bg-zinc-900/50 space-y-3">
-          <FileQuestion className="w-10 h-10 text-gray-400 mx-auto" />
-          <h3 className="text-sm font-semibold text-gray-900 dark:text-white">No Tracked Prompts Yet</h3>
-          <p className="text-xs text-gray-500 max-w-sm mx-auto">
-            Add queries manually, generate tailored prompts with AI, or import a CSV list to start monitoring your AI visibility.
-          </p>
-          <div className="flex items-center justify-center gap-2 pt-2">
-            <Button
-              onClick={() => setIsAddModalOpen(true)}
-              size="sm"
-              className="h-8.5 px-3.5 rounded-xl bg-gray-900 hover:bg-black text-white text-xs gap-1.5"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Add Prompt</span>
-            </Button>
-            <Button
-              onClick={() => {
-                setIsAiModalOpen(true);
-                handleGenerateAiPrompts();
-              }}
-              size="sm"
-              variant="outline"
-              className="h-8.5 px-3 rounded-xl border-gray-300 text-xs gap-1.5"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-              <span>Generate with AI</span>
-            </Button>
+        /* Empty State with Table Skeleton preview and frosted glass overlay */
+        <div className="relative rounded-2xl border border-gray-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-2xs overflow-hidden min-h-[420px]">
+          {/* Background Skeleton Data Table */}
+          <div className="opacity-40 select-none pointer-events-none filter blur-[1px]">
+            {/* Skeleton Table Header */}
+            <div className="p-5 border-b border-gray-100 dark:border-zinc-800/80 flex items-center justify-between">
+              <div className="space-y-1.5">
+                <div className="h-4 w-36 bg-gray-200 dark:bg-zinc-800 rounded-md animate-pulse" />
+                <div className="h-3 w-64 bg-gray-150 dark:bg-zinc-800/60 rounded-md animate-pulse" />
+              </div>
+              <div className="h-8 w-20 bg-gray-200 dark:bg-zinc-800 rounded-xl animate-pulse" />
+            </div>
+
+            {/* Skeleton Rows */}
+            <table className="w-full text-left border-collapse table-fixed">
+              <thead>
+                <tr className="border-b border-gray-100 dark:border-zinc-800/80 bg-gray-50/50 dark:bg-zinc-900/40 text-[11px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-wider">
+                  <th className="py-3.5 px-4 w-10 text-center">
+                    <div className="w-4 h-4 rounded border border-gray-300 dark:border-zinc-700 mx-auto" />
+                  </th>
+                  <th className="py-3.5 px-5 w-[36%] min-w-[280px]">Prompt / Query</th>
+                  <th className="py-3.5 px-4 w-[14%] min-w-[130px]">Technical Pillar</th>
+                  <th className="py-3.5 px-4 w-[14%] min-w-[130px]">Search Intent</th>
+                  <th className="py-3.5 px-4 w-[10%] min-w-[100px]">Type</th>
+                  <th className="py-3.5 px-4 w-[8%] text-center min-w-[70px]">Avg</th>
+                  <th className="py-3.5 px-4 w-[8%] text-center min-w-[70px]">Active</th>
+                  <th className="py-3.5 px-5 w-[10%] text-right min-w-[90px]">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 dark:divide-zinc-800/60">
+                {[
+                  { q: 'w-4/5' },
+                  { q: 'w-3/5' },
+                  { q: 'w-2/3' },
+                  { q: 'w-3/4' },
+                  { q: 'w-1/2' },
+                ].map((row, idx) => (
+                  <tr key={`skeleton-${idx}`}>
+                    <td className="py-4 px-4 text-center">
+                      <div className="w-4 h-4 rounded border border-gray-300 dark:border-zinc-700 mx-auto" />
+                    </td>
+                    <td className="py-4 px-5">
+                      <div className="space-y-2">
+                        <div className={`h-3.5 bg-gray-200 dark:bg-zinc-800 rounded-md ${row.q} animate-pulse`} />
+                        <div className="flex items-center gap-1.5 pt-0.5">
+                          <div className="h-4 w-12 rounded bg-gray-100 dark:bg-zinc-800 animate-pulse" />
+                          <div className="h-4 w-14 rounded bg-gray-100 dark:bg-zinc-800 animate-pulse" />
+                          <div className="h-4 w-12 rounded bg-gray-100 dark:bg-zinc-800 animate-pulse" />
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-4 px-4">
+                      <div className="h-6 w-16 rounded-full bg-gray-200 dark:bg-zinc-800 animate-pulse" />
+                    </td>
+                    <td className="py-4 px-4">
+                      <div className="h-5 w-20 rounded-full bg-gray-150 dark:bg-zinc-800/80 animate-pulse" />
+                    </td>
+                    <td className="py-4 px-4">
+                      <div className="h-5 w-16 rounded-full bg-gray-150 dark:bg-zinc-800/70 animate-pulse" />
+                    </td>
+                    <td className="py-4 px-4 text-center">
+                      <div className="h-4 w-8 rounded bg-gray-200 dark:bg-zinc-800 mx-auto animate-pulse" />
+                    </td>
+                    <td className="py-4 px-4 text-center">
+                      <div className="h-5 w-8 rounded-full bg-gray-200 dark:bg-zinc-800 mx-auto animate-pulse" />
+                    </td>
+                    <td className="py-4 px-5 text-right">
+                      <div className="h-6 w-12 rounded bg-gray-150 dark:bg-zinc-800/70 ml-auto animate-pulse" />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Centered Frosted Glass Overlay */}
+          <div className="absolute inset-0 bg-white/80 dark:bg-zinc-900/85 backdrop-blur-[2.5px] flex flex-col items-center justify-center p-6 text-center z-10 animate-in fade-in duration-300">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-500/15 via-indigo-500/10 to-blue-600/20 border border-blue-200/60 dark:border-blue-800/60 flex items-center justify-center text-blue-600 dark:text-blue-400 shadow-xs mb-3">
+              <Sparkles className="w-6 h-6" />
+            </div>
+            <h3 className="text-base font-bold text-gray-900 dark:text-white tracking-tight">
+              No Tracked Prompts Yet
+            </h3>
+            <p className="text-xs text-gray-500 dark:text-zinc-400 max-w-md mt-1 mb-5 leading-relaxed">
+              Synthesize high-converting prompt queries with AI across GEO, AEO, and AIO pillars, or create custom search queries to monitor your visibility in generative engines.
+            </p>
+            <div className="flex flex-wrap items-center justify-center gap-2.5">
+              {/* Primary AI CTA */}
+              <Button
+                onClick={() => {
+                  setIsAiModalOpen(true);
+                  if (aiSuggestions.length === 0) handleGenerateAiPrompts();
+                }}
+                className="h-9 px-4 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-700 hover:via-indigo-700 hover:to-blue-800 text-white font-medium text-xs flex items-center gap-2 shadow-sm shadow-blue-500/25 border-0 transition-all cursor-pointer hover:shadow-md hover:shadow-blue-500/30 active:scale-[0.98]"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-white" />
+                <span>Generate Prompts with AI</span>
+              </Button>
+
+              {/* Secondary Add Prompt */}
+              <Button
+                variant="outline"
+                onClick={() => setIsAddModalOpen(true)}
+                className="h-9 px-3.5 rounded-xl border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-gray-700 dark:text-zinc-300 font-medium text-xs flex items-center gap-1.5 shadow-2xs hover:bg-gray-50 dark:hover:bg-zinc-800 cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5 text-gray-500 dark:text-zinc-400" />
+                <span>Add Prompt</span>
+              </Button>
+
+              {/* Tertiary Import CSV */}
+              <Button
+                variant="outline"
+                onClick={() => setIsImportModalOpen(true)}
+                className="h-9 px-3.5 rounded-xl border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-gray-700 dark:text-zinc-300 font-medium text-xs flex items-center gap-2 shadow-2xs hover:bg-gray-50 dark:hover:bg-zinc-800 cursor-pointer"
+              >
+                <Upload className="w-3.5 h-3.5 text-gray-500 dark:text-zinc-400" />
+                <span>Import CSV</span>
+              </Button>
+            </div>
           </div>
         </div>
       ) : (
-        <div className="rounded-xl border border-gray-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-2xs overflow-hidden">
+        <div className="rounded-2xl border border-gray-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-2xs overflow-hidden">
           {/* Table Title Bar */}
           <div className="p-5 border-b border-gray-100 dark:border-zinc-800/80 flex items-center justify-between">
             <div>
@@ -1192,27 +1344,32 @@ export default function PromptsPage() {
                 {AVAILABLE_ENGINES.map((eng) => {
                   const isChecked = newTargetEngines.includes(eng.name);
                   return (
-                    <label
+                    <button
                       key={eng.name}
+                      type="button"
                       onClick={() => handleToggleTargetEngine(eng.name)}
                       className={cn(
-                        'p-2 rounded-xl border text-xs font-medium flex items-center gap-2 cursor-pointer transition-all select-none',
+                        'p-2 rounded-xl border text-xs font-medium flex items-center gap-2 cursor-pointer transition-all select-none text-left',
                         isChecked
                           ? 'border-blue-500 bg-blue-50/30 dark:bg-blue-950/20 text-gray-900 dark:text-white shadow-2xs'
-                          : 'border-gray-200 dark:border-zinc-800 bg-gray-50/40 dark:bg-zinc-800/30 text-gray-400 dark:text-zinc-500'
+                          : 'border-gray-200 dark:border-zinc-800 bg-gray-50/40 dark:bg-zinc-800/30 text-gray-400 dark:text-zinc-500 hover:border-gray-300 dark:hover:border-zinc-700'
                       )}
                     >
-                      <input
-                        type="checkbox"
-                        checked={isChecked}
-                        onChange={() => {}} // handled by label onClick
-                        className="w-3.5 h-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 accent-blue-600"
-                      />
+                      <div
+                        className={cn(
+                          'w-3.5 h-3.5 rounded border flex items-center justify-center shrink-0 transition-colors',
+                          isChecked
+                            ? 'border-blue-600 bg-blue-600 text-white'
+                            : 'border-gray-300 dark:border-zinc-600 bg-white dark:bg-zinc-900'
+                        )}
+                      >
+                        {isChecked && <Check className="w-2.5 h-2.5 stroke-[3] text-white" />}
+                      </div>
                       <div className="flex items-center gap-1.5">
                         <span className={cn('w-2 h-2 rounded-full', eng.color)} />
                         <span>{eng.name}</span>
                       </div>
-                    </label>
+                    </button>
                   );
                 })}
               </div>

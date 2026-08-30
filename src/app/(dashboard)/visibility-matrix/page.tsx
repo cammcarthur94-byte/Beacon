@@ -16,6 +16,7 @@ import {
   Plus,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { EngineIcon } from '@/components/ui/engine-icon';
 import { cn } from '@/lib/utils';
 import { getResponseHistory } from '@/lib/actions/responses';
 import { getUserBrands } from '@/lib/actions/brands';
@@ -199,12 +200,13 @@ export default function SourceIntelligencePage() {
       {/* 1. Header Toolbar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-2xl border border-gray-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-2xs">
         <div className="space-y-1">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
               Source & Citation Intelligence
             </h1>
-            <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800/60">
-              Live Sources
+            <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/60">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span>Live Sources</span>
             </span>
           </div>
           <p className="text-xs text-gray-500 dark:text-zinc-400 font-medium">
@@ -247,20 +249,162 @@ export default function SourceIntelligencePage() {
           </span>
         </div>
       ) : domains.length === 0 ? (
-        <div className="p-12 text-center rounded-2xl border border-dashed border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xs space-y-3">
-          <Globe className="w-10 h-10 text-gray-400 dark:text-zinc-600 mx-auto" />
-          <h3 className="text-base font-semibold text-gray-900 dark:text-white">
-            No Cited Sources Recorded Yet
-          </h3>
-          <p className="text-xs text-gray-500 dark:text-zinc-400 max-w-md mx-auto">
-            When you run audit queries across AI engines like ChatGPT, Claude, Perplexity, and Gemini, any URLs and domains cited in answers will be automatically indexed here.
-          </p>
-          <div className="pt-2">
-            <Link href="/prompts">
-              <Button size="sm" className="rounded-xl text-xs gap-1.5 cursor-pointer">
-                <Plus className="w-3.5 h-3.5" /> Add & Audit Prompts
-              </Button>
-            </Link>
+        /* Empty State with Table Skeleton preview and frosted glass overlay */
+        <div className="relative rounded-2xl border border-gray-200/80 dark:border-zinc-800 bg-white/60 dark:bg-zinc-900/60 shadow-2xs overflow-hidden min-h-[460px]">
+          {/* Wireframe Data Table Background with Light Shading and Subtle Blur */}
+          <div className="p-4 sm:p-5 opacity-40 dark:opacity-20 filter blur-[0.6px] pointer-events-none select-none" aria-hidden="true">
+            {/* Wireframe Table Header / Toolbar */}
+            <div className="p-4 rounded-xl border border-gray-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4">
+              <div className="space-y-1.5">
+                <div className="h-4 w-48 bg-gray-200 dark:bg-zinc-800 rounded-md animate-pulse" />
+                <div className="h-3 w-72 bg-gray-150 dark:bg-zinc-800/60 rounded-md" />
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="h-8 w-44 bg-gray-100 dark:bg-zinc-800 rounded-xl" />
+                <div className="h-8 w-24 bg-gray-100 dark:bg-zinc-800 rounded-xl" />
+              </div>
+            </div>
+
+            {/* Wireframe Category Filter Bar */}
+            <div className="flex items-center gap-2 pb-4 overflow-hidden">
+              <div className="h-4 w-16 bg-gray-200 dark:bg-zinc-800 rounded mr-1" />
+              <div className="h-7 w-20 bg-gray-900/20 dark:bg-zinc-700 rounded-xl" />
+              <div className="h-7 w-24 bg-blue-50 dark:bg-blue-950/60 rounded-xl border border-blue-200/60 dark:border-blue-800/60" />
+              <div className="h-7 w-28 bg-amber-50 dark:bg-amber-950/60 rounded-xl border border-amber-200/60 dark:border-amber-800/60" />
+              <div className="h-7 w-28 bg-orange-50 dark:bg-orange-950/60 rounded-xl border border-orange-200/60 dark:border-orange-800/60" />
+              <div className="h-7 w-28 bg-purple-50 dark:bg-purple-950/60 rounded-xl border border-purple-200/60 dark:border-purple-800/60" />
+            </div>
+
+            {/* Wireframe Table Structure */}
+            <div className="rounded-xl border border-gray-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 overflow-hidden">
+              <table className="w-full text-left border-collapse table-fixed">
+                <thead>
+                  <tr className="border-b border-gray-100 dark:border-zinc-800/80 bg-gray-50/50 dark:bg-zinc-900/40 text-[11px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-wider">
+                    <th className="py-3.5 px-6 w-[34%] min-w-[220px]">Domain / URL</th>
+                    <th className="py-3.5 px-6 w-[18%] min-w-[130px]">Category</th>
+                    <th className="py-3.5 px-6 w-[20%] min-w-[140px]">Domain Authority</th>
+                    <th className="py-3.5 px-6 w-[12%] min-w-[100px] text-right">Citation Count</th>
+                    <th className="py-3.5 px-6 w-[16%] min-w-[130px] text-right">Feeding Engines</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 dark:divide-zinc-800/60 text-xs">
+                  {[
+                    {
+                      domain: 'docs.github.com',
+                      url: 'https://docs.github.com/en/actions',
+                      category: 'Official Documentation',
+                      categoryBg: 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200/80 dark:border-emerald-800/60',
+                      da: 96,
+                      citations: 184,
+                      engines: ['ChatGPT', 'Perplexity', 'Gemini', 'Claude'],
+                    },
+                    {
+                      domain: 'reddit.com/r/technology',
+                      url: 'https://reddit.com/r/technology/comments/...',
+                      category: 'Community & Forum',
+                      categoryBg: 'bg-orange-50 dark:bg-orange-950/60 text-orange-700 dark:text-orange-300 border-orange-200/80 dark:border-orange-800/60',
+                      da: 91,
+                      citations: 142,
+                      engines: ['ChatGPT', 'Perplexity', 'Copilot'],
+                    },
+                    {
+                      domain: 'g2.com/categories/analytics',
+                      url: 'https://www.g2.com/categories/seo-analytics',
+                      category: 'Review & Aggregator',
+                      categoryBg: 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-200/80 dark:border-amber-800/60',
+                      da: 89,
+                      citations: 118,
+                      engines: ['Claude', 'Gemini', 'ChatGPT'],
+                    },
+                    {
+                      domain: 'techcrunch.com/enterprise',
+                      url: 'https://techcrunch.com/2026/02/ai-search-engines',
+                      category: 'Tech Media',
+                      categoryBg: 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border-blue-200/80 dark:border-blue-800/60',
+                      da: 94,
+                      citations: 95,
+                      engines: ['Perplexity', 'Copilot', 'ChatGPT'],
+                    },
+                    {
+                      domain: 'gartner.com/reviews',
+                      url: 'https://www.gartner.com/reviews/market',
+                      category: 'Analyst & Research',
+                      categoryBg: 'bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border-purple-200/80 dark:border-purple-800/60',
+                      da: 92,
+                      citations: 67,
+                      engines: ['ChatGPT', 'Claude', 'Copilot', 'Gemini'],
+                    },
+                  ].map((row, idx) => (
+                    <tr key={idx} className="hover:bg-gray-50/50">
+                      <td className="py-3.5 px-6">
+                        <div className="flex items-center gap-3">
+                          <div className="w-7 h-7 rounded-lg bg-gray-200 dark:bg-zinc-800 flex items-center justify-center text-[10px] font-bold text-gray-500">
+                            {row.domain[0].toUpperCase()}
+                          </div>
+                          <div className="space-y-0.5">
+                            <div className="font-semibold text-gray-800 dark:text-zinc-200">{row.domain}</div>
+                            <div className="text-[10px] text-gray-400 font-mono truncate max-w-xs">{row.url}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-6 whitespace-nowrap">
+                        <span className={cn('inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold border', row.categoryBg)}>
+                          {row.category}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-6 whitespace-nowrap">
+                        <div className="flex items-center gap-2.5">
+                          <span className="font-bold font-mono text-gray-800 dark:text-zinc-200">DA {row.da}</span>
+                          <div className="w-16 h-1.5 bg-gray-200 dark:bg-zinc-800 rounded-full overflow-hidden">
+                            <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${row.da}%` }} />
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-6 text-right whitespace-nowrap">
+                        <span className="font-mono font-bold text-gray-800 dark:text-zinc-200">{row.citations}</span>
+                      </td>
+                      <td className="py-3.5 px-6 text-right whitespace-nowrap">
+                        <div className="flex items-center justify-end gap-1">
+                          {row.engines.map((eng) => (
+                            <span key={eng} className="p-1 rounded-md bg-gray-100 dark:bg-zinc-800 inline-flex items-center" title={eng}>
+                              <EngineIcon engine={eng} size={13} />
+                            </span>
+                          ))}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Centered Empty State Overlay Card */}
+          <div className="absolute inset-0 flex items-center justify-center p-4">
+            <div className="max-w-lg w-full p-6 sm:p-8 text-center rounded-2xl bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md border border-gray-200/90 dark:border-zinc-800 shadow-xl space-y-4 animate-in fade-in zoom-in-95 duration-200">
+              <div className="w-12 h-12 rounded-2xl bg-gray-100 dark:bg-zinc-800 flex items-center justify-center mx-auto text-gray-700 dark:text-zinc-300 border border-gray-200/70 dark:border-zinc-700/70 shadow-2xs">
+                <Globe className="w-6 h-6 text-gray-700 dark:text-zinc-300" />
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white">
+                  No Cited Sources Recorded Yet
+                </h3>
+                <p className="text-xs sm:text-sm text-gray-500 dark:text-zinc-400 max-w-md mx-auto leading-relaxed">
+                  When you run audit queries across AI engines like ChatGPT, Claude, Perplexity, Gemini, and Microsoft Copilot, any URLs and domains cited in answers will be automatically indexed here.
+                </p>
+              </div>
+              <div className="pt-2">
+                <Link href="/prompts">
+                  <Button
+                    size="sm"
+                    className="h-9 px-4 rounded-xl text-xs font-semibold bg-gray-900 hover:bg-black dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-zinc-900 shadow-sm cursor-pointer gap-1.5 transition-all"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>+ Add & Audit Prompts</span>
+                  </Button>
+                </Link>
+              </div>
+            </div>
           </div>
         </div>
       ) : (
