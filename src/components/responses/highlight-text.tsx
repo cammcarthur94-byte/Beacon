@@ -9,36 +9,55 @@ interface HighlightTextProps {
   className?: string;
 }
 
-export function HighlightText({
-  text,
+// Wrapped in React.memo to prevent unnecessary re-renders when parent components update unrelated state
+export const HighlightText = React.memo(function HighlightText({
+  text = '',
   brandName,
   aliases = [],
   className = '',
 }: HighlightTextProps) {
+  // Stable stringified representation of aliases to prevent re-compiling regex on new array references
+  const aliasesKey = aliases.join('\0');
+
+  // Performance Optimization:
+  // Memoize search terms processing, compiled RegExp, and Set of lowercased terms.
+  // Using a Set reduces match lookups in the render loop from O(N * K) array scans to O(1) Set operations.
+  const { searchTermsSet, regex } = React.useMemo(() => {
+    const terms = [brandName, ...aliases]
+      .map((term) => term.trim())
+      .filter((term) => term.length > 0);
+
+    if (terms.length === 0) {
+      return { searchTermsSet: new Set<string>(), regex: null };
+    }
+
+    const set = new Set(terms.map((term) => term.toLowerCase()));
+    const escapedTerms = terms.map((term) =>
+      term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    );
+    const compiledRegex = new RegExp(`(${escapedTerms.join('|')})`, 'gi');
+
+    return { searchTermsSet: set, regex: compiledRegex };
+  }, [brandName, aliasesKey]);
+
+  // Performance Optimization:
+  // Memoize text splitting so large LLM transcripts are only split when text or regex changes.
+  const parts = React.useMemo(() => {
+    if (!text || !regex) return [text || ''];
+    return text.split(regex);
+  }, [text, regex]);
+
   if (!text) return null;
 
-  const searchTerms = [brandName, ...aliases]
-    .map((term) => term.trim())
-    .filter((term) => term.length > 0);
-
-  if (searchTerms.length === 0) {
+  if (searchTermsSet.size === 0 || !regex) {
     return <span className={className}>{text}</span>;
   }
-
-  // Escape special regex characters
-  const escapedTerms = searchTerms.map((term) =>
-    term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  );
-  const regex = new RegExp(`(${escapedTerms.join('|')})`, 'gi');
-
-  const parts = text.split(regex);
 
   return (
     <span className={className}>
       {parts.map((part, index) => {
-        const isMatch = searchTerms.some(
-          (term) => term.toLowerCase() === part.toLowerCase()
-        );
+        // O(1) Set lookup replacing O(K) array traversal with repeated .toLowerCase() calls
+        const isMatch = searchTermsSet.has(part.toLowerCase());
 
         if (isMatch) {
           return (
@@ -55,4 +74,4 @@ export function HighlightText({
       })}
     </span>
   );
-}
+});
