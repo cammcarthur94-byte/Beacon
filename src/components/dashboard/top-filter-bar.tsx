@@ -145,6 +145,7 @@ export function TopFilterBar() {
             onClick={resetFilters}
             className="h-8 px-2 rounded-lg text-xs text-gray-500 hover:text-gray-900 dark:hover:text-zinc-200"
             title="Reset to default filters"
+            aria-label="Reset to default filters"
           >
             <RotateCcw className="w-3 h-3" />
           </Button>
@@ -164,9 +165,11 @@ export function TopFilterBar() {
               <button
                 key={engine.id}
                 type="button"
+                aria-pressed={isSelected}
+                aria-label={`Toggle ${engine.name} engine filter`}
                 onClick={() => toggleEngine(engine.id)}
                 className={cn(
-                  'px-2.5 py-1 rounded-lg text-xs font-medium border transition-all duration-150 flex items-center gap-1.5 cursor-pointer shadow-2xs select-none',
+                  'px-2.5 py-1 rounded-lg text-xs font-medium border transition-all duration-150 flex items-center gap-1.5 cursor-pointer shadow-2xs select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:focus-visible:ring-blue-400',
                   isSelected
                     ? engine.activeBg
                     : 'bg-white dark:bg-zinc-900/60 border-gray-200 dark:border-zinc-800 text-gray-400 dark:text-zinc-500 opacity-60 hover:opacity-90'
@@ -194,8 +197,9 @@ export function TopFilterBar() {
           type="button"
           onClick={selectAllEngines}
           disabled={isAllSelected}
+          aria-label="Select all engine filters"
           className={cn(
-            'text-[11px] font-medium transition-colors',
+            'text-[11px] font-medium transition-colors rounded px-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:focus-visible:ring-blue-400',
             isAllSelected
               ? 'text-gray-400 dark:text-zinc-600 cursor-default'
               : 'text-blue-600 dark:text-blue-400 hover:underline cursor-pointer'

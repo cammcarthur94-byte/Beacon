@@ -272,9 +272,11 @@ export default function DashboardPage() {
               <button
                 key={eng.name}
                 type="button"
+                aria-pressed={isActive}
+                aria-label={`Toggle ${eng.name} engine filter`}
                 onClick={() => toggleEngine(eng.name)}
                 className={cn(
-                  'px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200 flex items-center gap-1.5 cursor-pointer select-none shadow-2xs',
+                  'px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200 flex items-center gap-1.5 cursor-pointer select-none shadow-2xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:focus-visible:ring-blue-400',
                   isActive
                     ? eng.activeBg
                     : 'bg-white dark:bg-zinc-900 border-gray-200 dark:border-zinc-800 text-gray-400 dark:text-zinc-500 opacity-60 hover:opacity-100'
