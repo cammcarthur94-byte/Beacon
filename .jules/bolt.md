@@ -1,0 +1,3 @@
+## 2025-05-10 - HighlightText Regex & Component Memoization
+**Learning:** When text components highlight search terms across large strings (such as raw LLM responses), re-creating `RegExp` instances and performing $O(N)$ array searches on every render or parent state change causes avoidable main thread overhead. Using primitive serialization (e.g. `aliases.join('\0')`) stabilizes hook dependency arrays even when array props default or re-evaluate.
+**Action:** Move `useMemo` above all conditional returns to comply with Rules of Hooks, stabilize array prop dependencies with primitive keys, and use $O(1)$ `Set` lookups inside iteration loops.

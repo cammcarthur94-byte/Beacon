@@ -9,36 +9,50 @@ interface HighlightTextProps {
   className?: string;
 }
 
-export function HighlightText({
+export const HighlightText = React.memo(function HighlightText({
   text,
   brandName,
-  aliases = [],
+  aliases,
   className = '',
 }: HighlightTextProps) {
+  // Stabilize aliases key to prevent default array reference instability from re-triggering useMemo
+  const aliasKey = aliases ? aliases.join('\0') : '';
+
+  // Hooks must be called unconditionally at top level before early returns
+  const { searchTermsSet, regex } = React.useMemo(() => {
+    const aliasList = aliasKey ? aliasKey.split('\0') : [];
+    const terms = [brandName, ...aliasList]
+      .map((term) => term.trim())
+      .filter((term) => term.length > 0);
+
+    if (terms.length === 0) {
+      return { searchTermsSet: new Set<string>(), regex: null };
+    }
+
+    const set = new Set(terms.map((term) => term.toLowerCase()));
+    const escapedTerms = terms.map((term) =>
+      term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    );
+
+    return {
+      searchTermsSet: set,
+      regex: new RegExp(`(${escapedTerms.join('|')})`, 'gi'),
+    };
+  }, [brandName, aliasKey]);
+
   if (!text) return null;
 
-  const searchTerms = [brandName, ...aliases]
-    .map((term) => term.trim())
-    .filter((term) => term.length > 0);
-
-  if (searchTerms.length === 0) {
+  if (!regex || searchTermsSet.size === 0) {
     return <span className={className}>{text}</span>;
   }
-
-  // Escape special regex characters
-  const escapedTerms = searchTerms.map((term) =>
-    term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  );
-  const regex = new RegExp(`(${escapedTerms.join('|')})`, 'gi');
 
   const parts = text.split(regex);
 
   return (
     <span className={className}>
       {parts.map((part, index) => {
-        const isMatch = searchTerms.some(
-          (term) => term.toLowerCase() === part.toLowerCase()
-        );
+        // Fast O(1) Set lookup instead of O(N) array search
+        const isMatch = searchTermsSet.has(part.toLowerCase());
 
         if (isMatch) {
           return (
@@ -55,4 +69,4 @@ export function HighlightText({
       })}
     </span>
   );
-}
+});
