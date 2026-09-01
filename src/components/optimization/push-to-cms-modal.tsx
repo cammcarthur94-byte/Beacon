@@ -190,18 +190,25 @@ export function PushToCmsModal({
 
             {/* Selectable CMS Target Options */}
             <div className="space-y-2">
-              <label className="text-xs font-semibold text-gray-700 dark:text-zinc-300">
+              <label id="cms-integration-label" className="text-xs font-semibold text-gray-700 dark:text-zinc-300">
                 Select CMS Integration
               </label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <div
+                role="radiogroup"
+                aria-labelledby="cms-integration-label"
+                className="grid grid-cols-1 sm:grid-cols-2 gap-2.5"
+              >
                 {CMS_OPTIONS.map((cms) => {
                   const isSelected = selectedCms === cms.id;
                   return (
-                    <div
+                    <button
+                      type="button"
+                      role="radio"
+                      aria-checked={isSelected}
                       key={cms.id}
                       onClick={() => setSelectedCms(cms.id)}
                       className={cn(
-                        'p-3 rounded-xl border transition-all cursor-pointer select-none space-y-1',
+                        'p-3 rounded-xl border transition-all cursor-pointer select-none space-y-1 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500',
                         isSelected
                           ? 'border-blue-500 bg-blue-50/40 dark:bg-blue-950/30 shadow-2xs'
                           : 'border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/60 hover:bg-gray-50 dark:hover:bg-zinc-800/40'
@@ -216,7 +223,7 @@ export function PushToCmsModal({
                       <p className="text-[11px] text-gray-500 dark:text-zinc-400 leading-snug line-clamp-2">
                         {cms.description}
                       </p>
-                    </div>
+                    </button>
                   );
                 })}
               </div>
