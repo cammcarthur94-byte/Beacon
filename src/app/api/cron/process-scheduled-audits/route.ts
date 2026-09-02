@@ -20,12 +20,18 @@ export async function GET(request: NextRequest) {
   const authHeader = request.headers.get('authorization');
   const cronSecret = process.env.CRON_SECRET;
 
-  if (process.env.NODE_ENV === 'production' && cronSecret) {
-    const expectedAuth = `Bearer ${cronSecret}`;
-    if (authHeader !== expectedAuth) {
-      console.warn('[CRON_SCHEDULED] Unauthorized scheduled audit trigger rejected.');
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+  if (!cronSecret) {
+    console.error('[CRON_SCHEDULED] CRON_SECRET environment variable is not configured.');
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+
+  const expectedAuth = `Bearer ${cronSecret}`;
+  if (authHeader !== expectedAuth) {
+    console.warn('[CRON_SCHEDULED] Unauthorized scheduled audit trigger rejected.');
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   let admin;
