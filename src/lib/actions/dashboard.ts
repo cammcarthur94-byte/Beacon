@@ -11,6 +11,17 @@ import {
 } from '@/types/geo';
 import { AI_ENGINES } from '@/lib/constants';
 
+function getNormalizedEngine(engineName?: string): AIEngine {
+  const rawEng = (engineName || '').toLowerCase();
+  if (rawEng.includes('google') || rawEng.includes('aio')) return 'google_aio';
+  if (rawEng.includes('copilot') || rawEng.includes('bing')) return 'copilot';
+  if (rawEng.includes('chatgpt')) return 'chatgpt';
+  if (rawEng.includes('claude')) return 'claude';
+  if (rawEng.includes('gemini')) return 'gemini';
+  if (rawEng.includes('perplexity')) return 'perplexity';
+  return rawEng as AIEngine;
+}
+
 export interface DashboardMetrics {
   hasBrand: boolean;
   hasPrompts: boolean;
@@ -175,6 +186,15 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
     citations = citRows || [];
   }
 
+  // Pre-build indexed maps for O(1) lookups during aggregation
+  const responseMap = new Map<string, any>();
+  responses.forEach((r) => responseMap.set(r.id, r));
+
+  const citationCountByResponseId = new Map<string, number>();
+  citations.forEach((c) => {
+    citationCountByResponseId.set(c.response_id, (citationCountByResponseId.get(c.response_id) || 0) + 1);
+  });
+
   // Calculate Overall Score (Average visibility_score across all completed responses)
   const validScores = responses
     .map((r) => (typeof r.visibility_score === 'number' ? r.visibility_score : null))
@@ -210,20 +230,7 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
     const score = typeof resp.visibility_score === 'number' ? resp.visibility_score : 0;
     group.scores.push(score);
 
-    const rawEng = (resp.engine_name || resp.engine || '').toLowerCase();
-    const eng: AIEngine = rawEng.includes('google') || rawEng.includes('aio')
-      ? 'google_aio'
-      : rawEng.includes('copilot') || rawEng.includes('bing')
-      ? 'copilot'
-      : rawEng.includes('chatgpt')
-      ? 'chatgpt'
-      : rawEng.includes('claude')
-      ? 'claude'
-      : rawEng.includes('gemini')
-      ? 'gemini'
-      : rawEng.includes('perplexity')
-      ? 'perplexity'
-      : (rawEng as AIEngine);
+    const eng = getNormalizedEngine(resp.engine_name || resp.engine);
 
     if (group.engineScores[eng]) {
       group.engineScores[eng].push(score);
@@ -254,12 +261,7 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
   // Compute Engine Breakdown
   const engineKeys: AIEngine[] = ['perplexity', 'claude', 'chatgpt', 'gemini', 'copilot', 'google_aio'];
   const engineComparisons: EngineComparison[] = engineKeys.map((engKey) => {
-    const engResponses = responses.filter((r) => {
-      const raw = (r.engine_name || r.engine || '').toLowerCase();
-      if (engKey === 'google_aio') return raw.includes('google') || raw.includes('aio');
-      if (engKey === 'copilot') return raw.includes('copilot') || raw.includes('bing');
-      return raw.includes(engKey);
-    });
+    const engResponses = responses.filter((r) => getNormalizedEngine(r.engine_name || r.engine) === engKey);
 
     const engScores = engResponses
       .map((r) => (typeof r.visibility_score === 'number' ? r.visibility_score : null))
@@ -274,9 +276,8 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
       ? Math.round((mentionedCount / engResponses.length) * 1000) / 10
       : 0;
 
-    // Citations count for this engine
-    const engRespIds = new Set(engResponses.map((r) => r.id));
-    const engCitCount = citations.filter((c) => engRespIds.has(c.response_id)).length;
+    // O(1) citation count sum using pre-computed Map instead of filtering citations array per engine
+    const engCitCount = engResponses.reduce((sum, r) => sum + (citationCountByResponseId.get(r.id) || 0), 0);
 
     const avgRank = avgScore >= 90 ? 1.2 : avgScore >= 75 ? 1.8 : avgScore >= 50 ? 2.5 : 3.5;
 
@@ -326,10 +327,10 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
     if (cit.is_target_brand) item.isTargetBrand = true;
     if (cit.sentiment) item.sentiments.push(cit.sentiment);
 
-    // Find engine for this citation
-    const resp = responses.find((r) => r.id === cit.response_id);
+    // O(1) response lookup via Map instead of O(N) array search
+    const resp = responseMap.get(cit.response_id);
     if (resp) {
-      const eng = (resp.engine_name || resp.engine || '').toLowerCase() as AIEngine;
+      const eng = getNormalizedEngine(resp.engine_name || resp.engine);
       if (eng) item.engines.add(eng);
     }
   });
@@ -371,8 +372,9 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
     .reverse()
     .map((resp, idx) => {
       const promptText = runPromptMap.get(resp.run_id) || 'Active Target Prompt';
-      const eng = (resp.engine_name || resp.engine || 'chatgpt').toLowerCase() as AIEngine;
-      const respCits = citations.filter((c) => c.response_id === resp.id).length;
+      const eng = getNormalizedEngine(resp.engine_name || resp.engine || 'chatgpt');
+      // O(1) citation count lookup via Map instead of O(C) array filter
+      const respCits = citationCountByResponseId.get(resp.id) || 0;
       const score = resp.visibility_score || 0;
       const impact = score >= 75 ? '+5.0%' : score >= 50 ? '+2.4%' : '0.0%';
 
