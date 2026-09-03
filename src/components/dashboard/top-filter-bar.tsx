@@ -164,15 +164,18 @@ export function TopFilterBar() {
               <button
                 key={engine.id}
                 type="button"
+                aria-pressed={isSelected}
+                aria-label={`Toggle ${engine.name} engine`}
                 onClick={() => toggleEngine(engine.id)}
                 className={cn(
-                  'px-2.5 py-1 rounded-lg text-xs font-medium border transition-all duration-150 flex items-center gap-1.5 cursor-pointer shadow-2xs select-none',
+                  'px-2.5 py-1 rounded-lg text-xs font-medium border transition-all duration-150 flex items-center gap-1.5 cursor-pointer shadow-2xs select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-zinc-900',
                   isSelected
                     ? engine.activeBg
                     : 'bg-white dark:bg-zinc-900/60 border-gray-200 dark:border-zinc-800 text-gray-400 dark:text-zinc-500 opacity-60 hover:opacity-90'
                 )}
               >
                 <span
+                  aria-hidden="true"
                   className={cn(
                     'w-1.5 h-1.5 rounded-full inline-block transition-transform',
                     isSelected ? 'scale-110 bg-current' : 'bg-gray-400 dark:bg-zinc-600'
@@ -180,7 +183,7 @@ export function TopFilterBar() {
                 />
                 <span>{engine.name}</span>
                 {isSelected && (
-                  <span className="text-[10px] font-mono opacity-80 pl-0.5">
+                  <span aria-hidden="true" className="text-[10px] font-mono opacity-80 pl-0.5">
                     ✓
                   </span>
                 )}
