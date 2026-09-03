@@ -27,7 +27,6 @@ export async function GET(request: NextRequest) {
   const authHeader = request.headers.get('authorization');
   const cronSecret = process.env.CRON_SECRET;
 
-  // In production, CRON_SECRET must be configured and match the Bearer token
   if (!cronSecret) {
     console.error('[CRON_AUDIT] CRON_SECRET environment variable is not configured');
     return NextResponse.json(
